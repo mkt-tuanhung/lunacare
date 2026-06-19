@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { colors } from '../../theme/colors';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { supabase } from '../../lib/supabase';
+import { useProfileStore } from '../../store/useProfileStore';
 
 const moods = [
   { label: 'Vui vẻ', icon: 'smile' },
@@ -36,11 +38,38 @@ export default function LogToday() {
     );
   };
 
-  const handleSave = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/home');
+  const profile = useProfileStore(state => state.profile);
+
+  const handleSave = async () => {
+    if (!profile?.uid) {
+      alert('Vui lòng đăng nhập để lưu dữ liệu!');
+      return;
+    }
+    
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { error } = await supabase.from('daily_logs').upsert({
+        user_id: profile.uid,
+        log_date: today,
+        is_period_day: isPeriodDay,
+        flow_level: selectedFlow,
+        moods: selectedMood ? [selectedMood] : [],
+        symptoms: selectedSymptoms,
+        notes: ''
+      }, { onConflict: 'user_id,log_date' });
+      
+      if (error) throw error;
+      
+      alert('Đã lưu Ghi nhận thành công!');
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/home');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Lỗi lưu dữ liệu: ' + err.message);
     }
   };
 

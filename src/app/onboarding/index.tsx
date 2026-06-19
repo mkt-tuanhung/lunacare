@@ -4,11 +4,14 @@ import { useState } from 'react';
 import { colors } from '../../theme/colors';
 import { Feather } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/useProfileStore';
+import { useCycleStore } from '../../store/useCycleStore';
+import { Platform } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 const QUESTIONS = [
   { id: 'displayName', title: 'Tên thân mật của Vợ là gì?', type: 'text', isRequired: true },
+  { id: 'lastPeriodDate', title: 'Kỳ kinh gần nhất của Vợ bắt đầu vào ngày nào?', type: 'date', isRequired: true },
   { id: 'goal', title: 'Mục tiêu chính của Vợ?', options: ['Theo dõi chu kỳ', 'Mong có em bé', 'Tránh thai tự nhiên'], isRequired: true },
   { id: 'cycleLength', title: 'Độ dài chu kỳ thường của Vợ (ngày)?', type: 'number', isRequired: true },
   { id: 'periodDuration', title: 'Vợ thường hành kinh mấy ngày?', type: 'number', isRequired: true },
@@ -42,13 +45,34 @@ export default function DeepOnboarding() {
     if (currentStep < QUESTIONS.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
-      // Hoàn tất
+      // Hoàn tất Onboarding
       profileState.setProfile({
         ...profileState.profile,
         displayName: answers.displayName || profileState.profile?.displayName || 'Vợ Yêu',
         onboardingCompleted: true,
         healthProfile: answers
       });
+      
+      // Khởi tạo CycleEngine dựa trên ngày kinh gần nhất
+      if (answers.lastPeriodDate && answers.cycleLength) {
+        const cycleStore = useCycleStore.getState();
+        // Tạo chu kỳ đầu tiên
+        const startDate = answers.lastPeriodDate;
+        const endDateObj = new Date(startDate);
+        endDateObj.setDate(endDateObj.getDate() + parseInt(answers.periodDuration || '5') - 1);
+        const endDate = endDateObj.toISOString().split('T')[0];
+        
+        cycleStore.addPeriodEvent({
+          userId: profileState.profile?.uid || 'temp_user',
+          startDate,
+          endDate,
+          flowLevel: answers.flowLevel || 'Bình thường',
+          symptoms: [],
+          moods: [],
+          notes: 'Dữ liệu từ Onboarding'
+        });
+      }
+
       await profileState.saveProfileToSupabase();
       router.replace('/home');
     }
@@ -77,6 +101,28 @@ export default function DeepOnboarding() {
   };
 
   const renderInput = () => {
+    if (q.type === 'date') {
+      if (Platform.OS === 'web') {
+        return (
+          // @ts-ignore - Dùng thẻ input HTML native cho web để có Date Picker xịn
+          <input 
+            type="date"
+            style={{ padding: 20, borderRadius: 20, fontSize: 18, border: 'none', backgroundColor: colors.card, boxShadow: '0px 4px 12px rgba(0,0,0,0.04)', outline: 'none', color: colors.text, fontFamily: 'inherit' }}
+            value={answers[q.id] || ''}
+            onChange={(e: any) => setAnswers({...answers, [q.id]: e.target.value})}
+          />
+        );
+      }
+      return (
+        <TextInput
+          style={styles.input}
+          placeholder="YYYY-MM-DD (VD: 2024-05-15)"
+          value={answers[q.id] || ''}
+          onChangeText={(t) => setAnswers({...answers, [q.id]: t})}
+        />
+      );
+    }
+
     if (q.type === 'text' || q.type === 'number') {
       return (
         <TextInput

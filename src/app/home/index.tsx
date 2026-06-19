@@ -51,12 +51,21 @@ export default function Home() {
           <View style={styles.circleContainer}>
             <View style={styles.largeCircle}>
               <View style={styles.innerCircle}>
-                <Text style={styles.daysNumber}>{daysLeft !== null && daysLeft >= 0 ? daysLeft : 0}</Text>
-                <Text style={styles.daysText}>Ngày nữa</Text>
+                {daysLeft !== null && daysLeft <= 0 && daysLeft >= -7 ? (
+                  <View style={{alignItems: 'center'}}>
+                    <Text style={[styles.daysNumber, { fontSize: 40 }]}>Ngày {-daysLeft + 1}</Text>
+                    <Text style={styles.daysText}>Của chu kỳ</Text>
+                  </View>
+                ) : (
+                  <View style={{alignItems: 'center'}}>
+                    <Text style={styles.daysNumber}>{daysLeft !== null && daysLeft > 0 ? daysLeft : 0}</Text>
+                    <Text style={styles.daysText}>Ngày nữa tới kỳ</Text>
+                  </View>
+                )}
               </View>
             </View>
             <View style={styles.cycleFooter}>
-              <Text style={styles.cycleFooterText}>Kỳ kinh tiếp theo: <Text style={{fontWeight: '700', color: colors.primaryDark}}>{prediction.predictedStartDate}</Text></Text>
+              <Text style={styles.cycleFooterText}>Kỳ tiếp theo dự kiến: <Text style={{fontWeight: '700', color: colors.primaryDark}}>{prediction.predictedStartDate}</Text></Text>
             </View>
           </View>
         ) : (

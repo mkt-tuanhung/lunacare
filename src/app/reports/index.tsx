@@ -1,10 +1,13 @@
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useProfileStore } from '../../store/useProfileStore';
 import { colors } from '../../theme/colors';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
 
 export default function Reports() {
   const router = useRouter();
+  const profile = useProfileStore(state => state.profile);
+  const health = profile?.healthProfile;
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -36,15 +39,15 @@ export default function Reports() {
           
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Độ dài chu kỳ trung bình</Text>
-            <Text style={styles.statValue}>28 ngày</Text>
+            <Text style={styles.statValue}>{health?.cycleLength || 28} ngày</Text>
           </View>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Ngày hành kinh trung bình</Text>
-            <Text style={styles.statValue}>5 ngày</Text>
+            <Text style={styles.statValue}>{health?.periodDuration || 5} ngày</Text>
           </View>
           <View style={[styles.statRow, { borderBottomWidth: 0 }]}>
             <Text style={styles.statLabel}>Biến động chu kỳ</Text>
-            <Text style={styles.statValue}>± 2 ngày (Đều)</Text>
+            <Text style={styles.statValue}>{health?.cycleRegularity || 'Không rõ'}</Text>
           </View>
         </View>
 
@@ -57,9 +60,15 @@ export default function Reports() {
           </View>
           
           <View style={styles.pillContainer}>
-            <View style={styles.pill}><Text style={styles.pillText}>Đau lưng (80%)</Text></View>
-            <View style={styles.pill}><Text style={styles.pillText}>Nổi mụn (50%)</Text></View>
-            <View style={styles.pill}><Text style={styles.pillText}>Cáu gắt (30%)</Text></View>
+            {health?.worstSymptoms?.map((sym: string) => (
+              <View key={sym} style={styles.pill}><Text style={styles.pillText}>{sym}</Text></View>
+            ))}
+            {health?.emotionalSymptoms?.map((sym: string) => (
+              <View key={sym} style={styles.pill}><Text style={styles.pillText}>{sym}</Text></View>
+            ))}
+            {(!health?.worstSymptoms?.length && !health?.emotionalSymptoms?.length) && (
+              <Text style={{color: colors.textMuted}}>Chưa có dữ liệu triệu chứng</Text>
+            )}
           </View>
         </View>
 

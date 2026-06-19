@@ -5,16 +5,66 @@ import { Feather, FontAwesome5 } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-// Dữ liệu giả lập cho lịch
+import { useState } from 'react';
+import { useCycleStore } from '../../store/useCycleStore';
+
 const WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-const DAYS_IN_MONTH = 30;
-const CURRENT_DAY = 15;
-const PERIOD_DAYS = [2, 3, 4, 5, 6];
-const FERTILE_DAYS = [16, 17, 18, 19, 20];
-const OVULATION_DAY = 19;
 
 export default function Calendar() {
   const router = useRouter();
+
+  const { prediction, periodEvents } = useCycleStore();
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfMonth = new Date(year, month, 1).getDay();
+  const startOffset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+
+  const today = new Date();
+  const CURRENT_DAY = (today.getFullYear() === year && today.getMonth() === month) ? today.getDate() : -1;
+
+  // Tính toán mảng ngày cho tháng hiện tại
+  let PERIOD_DAYS: number[] = [];
+  let FERTILE_DAYS: number[] = [];
+  let OVULATION_DAY: number = -1;
+
+  // Render các ngày kinh nguyệt thực tế
+  periodEvents.forEach(ev => {
+    const start = new Date(ev.startDate);
+    const end = new Date(ev.endDate);
+    if (start.getFullYear() === year && start.getMonth() === month) {
+      for (let d = start.getDate(); d <= Math.min(end.getDate(), daysInMonth); d++) {
+        PERIOD_DAYS.push(d);
+      }
+    }
+  });
+
+  // Render dự đoán (Tương lai)
+  if (prediction) {
+    const pStart = new Date(prediction.predictedStartDate);
+    const pEnd = new Date(prediction.predictedEndDate);
+    if (pStart.getFullYear() === year && pStart.getMonth() === month) {
+      for (let d = pStart.getDate(); d <= Math.min(pEnd.getDate(), daysInMonth); d++) {
+        PERIOD_DAYS.push(d);
+      }
+    }
+
+    const fStart = new Date(prediction.nextFertileWindow.start);
+    const fEnd = new Date(prediction.nextFertileWindow.end);
+    if (fStart.getFullYear() === year && fStart.getMonth() === month) {
+      for (let d = fStart.getDate(); d <= Math.min(fEnd.getDate(), daysInMonth); d++) {
+        FERTILE_DAYS.push(d);
+      }
+    }
+
+    const oDay = new Date(prediction.nextOvulationDate);
+    if (oDay.getFullYear() === year && oDay.getMonth() === month) {
+      OVULATION_DAY = oDay.getDate();
+    }
+  }
 
   const getDayStyle = (day: number) => {
     if (day === CURRENT_DAY) return styles.currentDay;
@@ -32,7 +82,10 @@ export default function Calendar() {
     return styles.normalDayText;
   };
 
-  const days = Array.from({ length: DAYS_IN_MONTH }, (_, i) => i + 1);
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  const handlePrevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const handleNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
   return (
     <View style={styles.container}>
@@ -49,9 +102,13 @@ export default function Calendar() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         <View style={styles.monthSelector}>
-          <Feather name="chevron-left" size={24} color={colors.textMuted} />
-          <Text style={styles.monthText}>Tháng 6, 2026</Text>
-          <Feather name="chevron-right" size={24} color={colors.textMuted} />
+          <Pressable onPress={handlePrevMonth}>
+            <Feather name="chevron-left" size={24} color={colors.textMuted} />
+          </Pressable>
+          <Text style={styles.monthText}>Tháng {month + 1}, {year}</Text>
+          <Pressable onPress={handleNextMonth}>
+            <Feather name="chevron-right" size={24} color={colors.textMuted} />
+          </Pressable>
         </View>
 
         <View style={styles.calendarCard}>
@@ -62,9 +119,10 @@ export default function Calendar() {
           </View>
 
           <View style={styles.daysGrid}>
-            {/* Pad empty days for the first row (giả sử mùng 1 là thứ 4) */}
-            <View style={styles.dayCell} />
-            <View style={styles.dayCell} />
+            {/* Pad empty days */}
+            {Array.from({ length: startOffset }).map((_, i) => (
+              <View key={`pad-${i}`} style={styles.dayCell} />
+            ))}
             
             {days.map(day => (
               <Pressable key={day} style={styles.dayCell}>
@@ -93,7 +151,7 @@ export default function Calendar() {
           </View>
         </View>
 
-        <View style={styles.actionCard}>
+        <Pressable style={styles.actionCard} onPress={() => alert('Sẽ cập nhật ở phiên bản tới nhé!')}>
           <View style={styles.actionIconBox}>
             <FontAwesome5 name="pen" size={20} color={colors.primary} />
           </View>
@@ -102,7 +160,7 @@ export default function Calendar() {
             <Text style={styles.actionDesc}>Cập nhật lại ngày bắt đầu hoặc kết thúc nếu có sai lệch.</Text>
           </View>
           <Feather name="chevron-right" size={24} color={colors.textMuted} />
-        </View>
+        </Pressable>
 
       </ScrollView>
     </View>

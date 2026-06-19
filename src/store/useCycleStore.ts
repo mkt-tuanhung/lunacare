@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PeriodEvent, CyclePrediction } from '../features/cycle/cycle.types';
 import { predictCycle } from '../features/cycle/cycle.engine';
 
@@ -12,7 +14,9 @@ interface CycleState {
   setPeriodEvents: (events: PeriodEvent[]) => void;
 }
 
-export const useCycleStore = create<CycleState>((set, get) => ({
+export const useCycleStore = create<CycleState>()(
+  persist(
+    (set, get) => ({
   periodEvents: [],
   prediction: null,
   
@@ -63,4 +67,10 @@ export const useCycleStore = create<CycleState>((set, get) => ({
     set({ periodEvents: events });
     get().calculatePrediction();
   }
-}));
+    }),
+    {
+      name: 'lunacare-cycle-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
