@@ -76,6 +76,7 @@ Trả lời CHỈ BẰNG 1 CHUỖI JSON HỢP LỆ (KHÔNG chứa markdown code 
   try {
     const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
     let textResult = "";
+    let fetchErrorMsg = "";
 
     if (API_KEY) {
       const response = await fetch(
@@ -90,7 +91,11 @@ Trả lời CHỈ BẰNG 1 CHUỖI JSON HỢP LỆ (KHÔNG chứa markdown code 
         }
       );
       const data = await response.json();
-      textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!response.ok) {
+        fetchErrorMsg = `Google API Error ${response.status}: ${data?.error?.message || 'Unknown error'}`;
+      } else {
+        textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      }
     } else {
       const prompt = systemPrompt;
       const response = await fetch('https://text.pollinations.ai/prompt/' + encodeURIComponent(prompt), { method: 'GET' });
