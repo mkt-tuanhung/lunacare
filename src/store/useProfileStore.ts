@@ -31,7 +31,13 @@ export interface HealthProfile {
   emotionalSymptoms: string[];
   partnerRequests: string;
   
-  // Nhóm 5: Partner Sync
+  // Nhóm 5: Tiền sử Y khoa & Tình dục (Chuyên sâu)
+  sexualFrequency?: string;
+  contraceptionMethod?: string;
+  recentPregnancy?: string;
+  weightChange?: string;
+
+  // Nhóm 6: Partner Sync
   supportLevel?: string;
   prediction?: any;
 }

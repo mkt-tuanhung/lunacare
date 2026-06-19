@@ -1,5 +1,6 @@
 import { Cycle, CyclePrediction } from './cycle.types';
 import { useProfileStore } from '../../store/useProfileStore';
+import { supabase } from '../../lib/supabase';
 
 export async function predictCycleWithAI(cycles: Cycle[]): Promise<CyclePrediction | null> {
   const profileState = useProfileStore.getState();
@@ -7,12 +8,26 @@ export async function predictCycleWithAI(cycles: Cycle[]): Promise<CyclePredicti
   
   if (!healthProfile) return null;
 
+  let recentLogsStr = "Chưa có ghi nhận hằng ngày.";
+  if (profileState.profile?.uid) {
+    const { data: logs } = await supabase
+      .from('daily_logs')
+      .select('*')
+      .eq('user_id', profileState.profile.uid)
+      .order('log_date', { ascending: false })
+      .limit(7);
+      
+    if (logs && logs.length > 0) {
+      recentLogsStr = logs.map(l => `Ngày ${l.log_date}: Kinh nguyệt ${l.is_period_day}, Tâm trạng: ${l.moods?.join(',')}, Triệu chứng: ${l.symptoms?.join(',')}`).join(' | ');
+    }
+  }
+
   const historyStr = cycles.length > 0 
     ? cycles.map(c => `Bắt đầu: ${c.startDate}, Kết thúc: ${c.endDate || 'Chưa rõ'}`).join(' | ')
     : `Chưa có lịch sử. Thông tin tham khảo: Kinh gần nhất ${healthProfile.lastPeriodDate}, chu kỳ ${healthProfile.cycleLength} ngày, kéo dài ${healthProfile.periodDuration} ngày.`;
 
   const systemPrompt = `
-Bạn là một AI chuyên gia Y Tế phụ sản phân tích chu kỳ kinh nguyệt thông minh. Nhiệm vụ của bạn là dự đoán chu kỳ KẾ TIẾP (gần nhất ở hiện tại/tương lai) của người dùng.
+Bạn là một AI chuyên gia Y Tế phụ sản phân tích chu kỳ kinh nguyệt thông minh. Nhiệm vụ của bạn là dự đoán chu kỳ KẾ TIẾP (gần nhất ở hiện tại/tương lai) của người dùng và đưa ra CHẨN ĐOÁN SỨC KHỎE DỰA TRÊN TRIỆU CHỨNG HÀNG NGÀY.
 Dưới đây là lịch sử chu kỳ và thông tin sức khỏe:
 - Lịch sử chu kỳ đã ghi nhận: ${historyStr}
 - Độ dài chu kỳ trung bình người dùng khai báo: ${healthProfile.cycleLength} ngày.
@@ -20,17 +35,26 @@ Dưới đây là lịch sử chu kỳ và thông tin sức khỏe:
 - Goal: ${healthProfile.goal}
 - Stress: ${healthProfile.stressLevel}
 - Ngủ: ${healthProfile.sleepHours} (${healthProfile.sleepQuality})
-- Tránh thai: ${healthProfile.birthControl}
+- Tránh thai (cơ bản): ${healthProfile.birthControl}
+- Phương pháp tránh thai lúc quan hệ: ${healthProfile.contraceptionMethod}
+- Tần suất quan hệ: ${healthProfile.sexualFrequency}
+- Tiền sử thai kỳ gần đây: ${healthProfile.recentPregnancy}
+- Thay đổi cân nặng: ${healthProfile.weightChange}
 - Bệnh lý: ${healthProfile.medicalConditions?.join(', ')}
+
+Ghi nhận sức khỏe hằng ngày (7 ngày gần nhất):
+${recentLogsStr}
 
 Hôm nay là: ${new Date().toISOString().split('T')[0]}.
 
 QUY TẮC BẮT BUỘC (CRITICAL RULES):
 1. KHÔNG BAO GIỜ dự đoán chu kỳ kế tiếp cách hiện tại hoặc cách chu kỳ cuối cùng hàng trăm/nghìn ngày. Nếu lần ghi nhận gần nhất cách đây vài tháng hoặc vài năm, bạn PHẢI tự động "tua" (cộng thêm các chu kỳ 28-30 ngày) cho đến khi ra được ngày bắt đầu chu kỳ gần với "Hôm nay" nhất.
 2. NẾU người dùng KHÔNG CÓ lịch sử (Chưa rõ), hãy dùng thông tin khai báo ban đầu để tính toán chu kỳ kế tiếp từ "Kinh gần nhất".
-3. LƯU Ý: Ngày rụng trứng = predictedStartDate trừ 14 ngày. Khoảng thụ thai = rụng trứng - 5 ngày đến + 1 ngày.
-4. QUAN TRỌNG: "predictedCycleLength" PHẢI LÀ SỐ THỰC TẾ (từ 21 đến 45 ngày), tuyệt đối không được trả về các số vô lý như 86, 100, hay 1000. Nếu không chắc chắn, hãy dùng ${healthProfile.cycleLength} ngày.
-5. QUAN TRỌNG: "predictedStartDate" PHẢI LÀ NGÀY TƯƠNG LAI GẦN NHẤT so với Hôm nay, KHÔNG ĐƯỢC xa hơn Hôm nay quá 45 ngày.
+3. LƯU Ý: Tính toán rụng trứng và chu kỳ phải có CƠ SỞ KHOA HỌC. Nếu có dùng thuốc tránh thai khẩn cấp, cân nặng giảm nhanh, mới sẩy thai/sinh con -> Bắt buộc phải điều chỉnh độ dài chu kỳ dài ra và lùi ngày rụng trứng lại thay vì dùng 28 ngày cố định.
+4. QUAN TRỌNG: "predictedCycleLength" PHẢI LÀ SỐ THỰC TẾ (từ 21 đến 55 ngày), tuyệt đối không được trả về các số vô lý như 86, 100, hay 1000. Nếu không chắc chắn, hãy dùng ${healthProfile.cycleLength} ngày.
+5. QUAN TRỌNG: "predictedStartDate" PHẢI LÀ NGÀY TƯƠNG LAI GẦN NHẤT so với Hôm nay, KHÔNG ĐƯỢC xa hơn Hôm nay quá 55 ngày.
+6. LỜI KHUYÊN HÀNG NGÀY: Dựa vào "Ghi nhận sức khỏe hằng ngày" gần nhất và "Thông tin sức khỏe", hãy viết 1 ĐẾN 2 câu ngắn gọn chẩn đoán tình trạng sức khỏe hiện tại và đưa ra lời khuyên thiết thực. Lưu lời khuyên này vào phần tử ĐẦU TIÊN của mảng "notes".
+
 
 Trả lời CHỈ BẰNG 1 CHUỖI JSON HỢP LỆ (KHÔNG chứa markdown code block \`\`\`, KHÔNG có text thừa ngoài JSON), cấu trúc như sau:
 {
@@ -152,22 +176,86 @@ export function predictCycle(cycles: Cycle[]): CyclePrediction {
   if (!sorted.length) {
     // NẾU CHƯA CÓ LỊCH SỬ NÀO -> Dự đoán hoàn toàn dựa trên dữ liệu nhập lúc Onboarding
     if (healthProfile?.lastPeriodDate && healthProfile?.cycleLength) {
-      let pStartDate = addDays(healthProfile.lastPeriodDate, healthProfile.cycleLength);
+      
+      let baseCycleLength = healthProfile.cycleLength;
+      
+      // 1. ĐIỀU CHỈNH ĐỘ DÀI CHU KỲ DỰA TRÊN CÂU HỎI CHUYÊN SÂU
+      if (healthProfile.stressLevel === 'Rất cao') {
+        baseCycleLength += 3;
+      } else if (healthProfile.stressLevel === 'Hơi căng thẳng') {
+        baseCycleLength += 1;
+      }
+      
+      if (healthProfile.birthControl === 'Thuốc hàng ngày' || healthProfile.contraceptionMethod === 'Thuốc hàng ngày') {
+        baseCycleLength = 28;
+      } else if (healthProfile.birthControl === 'Cấy que' || healthProfile.birthControl === 'Tiêm') {
+        baseCycleLength += 5;
+      }
+      
+      // Yếu tố mới: Thuốc tránh thai khẩn cấp làm lùi rụng trứng mạnh
+      if (healthProfile.contraceptionMethod === 'Thuốc tránh thai khẩn cấp') {
+        baseCycleLength += 10; 
+      }
+      
+      // Yếu tố mới: Sinh con hoặc Sẩy thai
+      if (healthProfile.recentPregnancy === 'Mới sinh con' || healthProfile.recentPregnancy === 'Mới sẩy thai/phá thai') {
+        baseCycleLength += 14; // Thường làm rối loạn chu kỳ nặng
+      }
+      
+      // Yếu tố mới: Thay đổi cân nặng
+      if (healthProfile.weightChange === 'Giảm cân nhanh') {
+        baseCycleLength += 5; // Giảm leptin -> Trễ rụng trứng
+      } else if (healthProfile.weightChange === 'Tăng cân nhanh') {
+        baseCycleLength += 3;
+      }
+
+      if (healthProfile.medicalConditions?.includes('PCOS (Đa nang buồng trứng)')) {
+        baseCycleLength += 7;
+      }
+      
+      if (healthProfile.activityLevel === 'Tập cường độ cao (VĐV)') {
+        baseCycleLength += 2;
+      }
+
+      if (healthProfile.diet?.includes('Ăn kiêng nghiêm ngặt/Keto')) {
+        baseCycleLength += 2;
+      }
+
+      // Giới hạn max/min hợp lý
+      if (baseCycleLength > 55) baseCycleLength = 55; // Nới lỏng lên 55 do các yếu tố sẩy thai/thuốc khẩn cấp
+      if (baseCycleLength < 21) baseCycleLength = 21;
+
+      let pStartDate = addDays(healthProfile.lastPeriodDate, baseCycleLength);
       
       const today = new Date();
       today.setHours(0,0,0,0);
       let loopCount = 0;
       while (new Date(pStartDate).getTime() < today.getTime() && loopCount < 100) { 
-          pStartDate = addDays(pStartDate, healthProfile.cycleLength);
+          pStartDate = addDays(pStartDate, baseCycleLength);
           loopCount++;
       }
       
       const pEndDate = addDays(pStartDate, healthProfile.periodDuration - 1);
-      const ovDate = addDays(pStartDate, -14); // Luteal Phase = 14
+      
+      // 2. ĐIỀU CHỈNH NGÀY RỤNG TRỨNG (Pha Hoàng Thể)
+      let lutealPhase = 14;
+      if (baseCycleLength <= 24) lutealPhase = 12;
+      if (baseCycleLength >= 35) lutealPhase = 16;
+      
+      if (healthProfile.medicalConditions?.includes('Tuyến giáp')) {
+        lutealPhase -= 2;
+      }
+      
+      if (healthProfile.recentPregnancy === 'Mới sẩy thai/phá thai') {
+        lutealPhase -= 2; // Suy hoàng thể thường gặp sau sẩy thai
+      }
+
+      const ovDate = addDays(pStartDate, -lutealPhase); 
+      
       return {
         predictedStartDate: pStartDate,
         predictedEndDate: pEndDate,
-        predictedCycleLength: healthProfile.cycleLength,
+        predictedCycleLength: baseCycleLength,
         predictedPeriodLength: healthProfile.periodDuration,
         ovulationDate: ovDate,
         fertileWindowStart: addDays(ovDate, -5),
@@ -175,8 +263,8 @@ export function predictCycle(cycles: Cycle[]): CyclePrediction {
         pmsWindowStart: addDays(pStartDate, -7),
         pmsWindowEnd: addDays(pStartDate, -1),
         confidence: "medium",
-        confidenceScore: 60,
-        notes: ["Dự đoán dựa trên câu trả lời khảo sát ban đầu."]
+        confidenceScore: 70,
+        notes: ["Dự đoán đã được tinh chỉnh bằng thuật toán Y khoa dựa trên lối sống, bệnh lý và mức độ căng thẳng của bạn."]
       };
     }
 

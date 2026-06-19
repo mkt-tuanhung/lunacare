@@ -112,6 +112,18 @@ export default function Home() {
                 <Text style={styles.ovulationText}>Ngày rụng trứng (dự kiến): <Text style={styles.ovulationBold}>{prediction.ovulationDate}</Text></Text>
               </View>
             )}
+
+            {prediction.notes && prediction.notes.length > 0 && (
+              <View style={[styles.ovulationCard, { backgroundColor: '#F3E5F5', borderColor: '#E1BEE7', marginTop: 15 }]}>
+                <View style={styles.ovulationHeader}>
+                  <MaterialCommunityIcons name="robot-outline" size={20} color="#9C27B0" />
+                  <Text style={[styles.ovulationTitle, { color: '#8E24AA' }]}>AI Chẩn Đoán & Lời Khuyên</Text>
+                </View>
+                <Text style={{ fontSize: 13, color: '#4A148C', lineHeight: 20 }}>
+                  {prediction.notes[0]}
+                </Text>
+              </View>
+            )}
           </View>
         ) : (
           <View style={styles.emptyContainer}>

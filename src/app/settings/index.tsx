@@ -94,6 +94,14 @@ export default function Settings() {
 
         <Text style={styles.sectionTitle}>Dữ liệu của bạn</Text>
         <View style={styles.card}>
+          <Pressable style={styles.row} onPress={() => router.push('/health-profile')}>
+            <View style={styles.rowIcon}><Feather name="file-text" size={20} color={colors.text} /></View>
+            <Text style={[styles.rowTitle, { flex: 1 }]}>Chỉnh sửa Hồ sơ Sức khỏe</Text>
+            <Feather name="chevron-right" size={20} color={colors.textMuted} />
+          </Pressable>
+
+          <View style={styles.divider} />
+
           <Pressable style={styles.row} onPress={() => alert('Đã tạo file PDF!')}>
             <View style={styles.rowIcon}><Feather name="download" size={20} color={colors.text} /></View>
             <Text style={[styles.rowTitle, { flex: 1 }]}>Xuất dữ liệu</Text>

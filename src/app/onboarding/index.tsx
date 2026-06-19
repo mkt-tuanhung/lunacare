@@ -21,11 +21,18 @@ const QUESTIONS = [
   { id: 'flowLevel', title: 'Lượng máu kinh thường thế nào?', options: ['Rất ít', 'Bình thường', 'Rất nhiều'], isRequired: false },
   { id: 'crampsSeverity', title: 'Mức độ đau bụng kinh?', options: ['Không đau', 'Đau nhẹ', 'Đau dữ dội'], isRequired: false },
   { id: 'pmsSeverity', title: 'Hội chứng tiền kinh nguyệt (PMS)?', options: ['Không bị', 'Khó chịu nhẹ', 'Rất mệt mỏi/Cáu gắt'], isRequired: false },
+  
+  // Các câu hỏi Y khoa chuyên sâu
+  { id: 'sexualFrequency', title: 'Tần suất quan hệ tình dục thường xuyên của Vợ?', options: ['Không quan hệ', '1-2 lần/tuần', '3-4 lần/tuần', 'Hàng ngày'], isRequired: false },
+  { id: 'contraceptionMethod', title: 'Biện pháp bảo vệ/tránh thai khi quan hệ?', options: ['Không dùng', 'Bao cao su', 'Xuất tinh ngoài', 'Thuốc tránh thai khẩn cấp'], isRequired: false },
+  { id: 'recentPregnancy', title: 'Tiền sử thai kỳ (trong 3 tháng qua)?', options: ['Không có', 'Mới sinh con', 'Mới sẩy thai/phá thai'], isRequired: false },
+  { id: 'weightChange', title: 'Sự thay đổi cân nặng đột ngột tháng qua?', options: ['Không', 'Giảm cân nhanh', 'Tăng cân nhanh'], isRequired: false },
+  
   { id: 'sleepHours', title: 'Vợ ngủ mấy tiếng/đêm?', options: ['< 5 tiếng', '6-7 tiếng', '8+ tiếng'], isRequired: false },
   { id: 'sleepQuality', title: 'Chất lượng giấc ngủ?', options: ['Ngủ sâu', 'Hay thức giấc', 'Mất ngủ'], isRequired: false },
   { id: 'stressLevel', title: 'Mức độ Stress hiện tại của Vợ?', options: ['Thấp', 'Trung bình', 'Rất cao'], isRequired: false },
   { id: 'activityLevel', title: 'Vợ có hay tập thể dục?', options: ['Không tập', 'Tập nhẹ', 'Cường độ cao'], isRequired: false },
-  { id: 'diet', title: 'Chế độ ăn của Vợ?', options: ['Bình thường', 'Ăn chay', 'Ăn kiêng'], isRequired: false },
+  { id: 'diet', title: 'Chế độ ăn của Vợ?', options: ['Bình thường', 'Ăn chay', 'Ăn kiêng nghiêm ngặt/Keto'], isRequired: false },
   { id: 'comfortItems', title: 'Tới tháng Vợ thích làm gì?', options: ['Uống trà ấm', 'Chườm nóng', 'Ăn ngọt', 'Nằm ngủ'], multi: true, isRequired: false },
   { id: 'worstSymptoms', title: 'Triệu chứng ghét nhất?', options: ['Đau lưng', 'Nổi mụn', 'Đau đầu', 'Chướng bụng'], multi: true, isRequired: false },
   { id: 'emotionalSymptoms', title: 'Cảm xúc hay gặp lúc tới tháng?', options: ['Dễ khóc', 'Cáu gắt', 'Trống rỗng'], multi: true, isRequired: false },
