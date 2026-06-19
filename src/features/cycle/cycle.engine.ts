@@ -79,7 +79,7 @@ Trả lời CHỈ BẰNG 1 CHUỖI JSON HỢP LỆ (KHÔNG chứa markdown code 
 
     if (API_KEY) {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -105,7 +105,7 @@ Trả lời CHỈ BẰNG 1 CHUỖI JSON HỢP LỆ (KHÔNG chứa markdown code 
     const prediction: CyclePrediction = JSON.parse(cleanJson);
     
     // VALIDATE KẾT QUẢ CỦA AI NẾU NÓ QUÁ VÔ LÝ
-    if (prediction.predictedCycleLength > 45 || prediction.predictedCycleLength < 20) {
+    if (prediction.predictedCycleLength > 55 || prediction.predictedCycleLength < 20) {
        prediction.predictedCycleLength = healthProfile.cycleLength || 28;
     }
     const today = new Date();
@@ -114,8 +114,9 @@ Trả lời CHỈ BẰNG 1 CHUỖI JSON HỢP LỆ (KHÔNG chứa markdown code 
     predictedStart.setHours(0,0,0,0);
     const DAY_MS = 1000 * 60 * 60 * 24;
     const diffDays = (predictedStart.getTime() - today.getTime()) / DAY_MS;
-    if (diffDays > 45 || diffDays < -45) {
-       throw new Error("AI dự đoán ngày quá vô lý (lệch hơn 45 ngày so với hiện tại).");
+    if (diffDays > 55 || diffDays < -55) {
+       console.error(`AI dự đoán ngày quá vô lý (lệch ${diffDays} ngày). Bắt buộc Fallback.`);
+       return null; // Trả về null để Store tự động kích hoạt thuật toán Local (Fallback)
     }
 
     console.log("AI Prediction Success", prediction);
@@ -318,6 +319,15 @@ export function predictCycle(cycles: Cycle[]): CyclePrediction {
       loopCount++;
   }
   
+  // NẾU TUA QUÁ ĐÀ (Do dữ liệu bị nhập sai lịch sử trước đó quá nhiều)
+  // Bắt buộc Reset lại ngày dự đoán về một khoảng thời gian hợp lý so với hôm nay
+  const diffDaysAfterLoop = (new Date(predictedStartDate).getTime() - today.getTime()) / DAY_MS;
+  if (diffDaysAfterLoop > 45) {
+      console.warn("Thuật toán tua quá đà do lỗi lịch sử. Ép reset về ngày hôm nay + số ngày hợp lý.");
+      // Chốt luôn: Bắt đầu lại một chu kỳ mới tính từ ngày hôm nay (hoặc bù trừ nhẹ)
+      predictedStartDate = addDays(today.toISOString().slice(0, 10), 0);
+  }
+
   const predictedEndDate = addDays(predictedStartDate, predictedPeriodLength - 1);
 
   // 4. Tính toán Pha Hoàng Thể (Luteal Phase Logic)
