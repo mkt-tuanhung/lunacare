@@ -198,7 +198,7 @@ export default function Calendar() {
           </View>
         </View>
 
-        <Pressable style={styles.actionCard} onPress={() => alert('Sẽ cập nhật ở phiên bản tới nhé!')}>
+        <Pressable style={styles.actionCard} onPress={() => router.push('/calendar/edit')}>
           <View style={styles.actionIconBox}>
             <FontAwesome5 name="pen" size={20} color={colors.primary} />
           </View>
