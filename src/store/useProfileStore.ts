@@ -80,6 +80,7 @@ export const useProfileStore = create<ProfileState>()(
     } catch (error) {
       console.error("Lỗi khi lưu lên Supabase:", error);
     }
+  }
   }),
   {
     name: 'lunacare-profile-storage',
