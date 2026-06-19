@@ -5,6 +5,7 @@ import { colors } from '../../theme/colors';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useProfileStore } from '../../store/useProfileStore';
+import { useCycleStore } from '../../store/useCycleStore';
 
 const moods = [
   { label: 'Vui vẻ', icon: 'smile' },
@@ -106,6 +107,9 @@ export default function LogToday() {
       }
 
       alert('Đã lưu Ghi nhận thành công!');
+      
+      // BẮT BUỘC TÍNH TOÁN LẠI CHU KỲ BẰNG AI KHI CÓ TRIỆU CHỨNG MỚI
+      await useCycleStore.getState().calculatePrediction();
       
       if (router.canGoBack()) {
         router.back();
