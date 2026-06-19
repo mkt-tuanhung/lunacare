@@ -180,11 +180,11 @@ export default function Home() {
           <Text style={styles.gridText}>Chăm sóc</Text>
         </Pressable>
 
-        <Pressable style={({pressed}) => [styles.gridItem, pressed && styles.pressed]} onPress={() => router.push('/partner')}>
+        <Pressable style={({pressed}) => [styles.gridItem, pressed && styles.pressed]} onPress={() => router.push('/history')}>
           <View style={[styles.iconWrapper, { backgroundColor: '#FFF5E6' }]}>
-            <Feather name="heart" size={24} color="#FF9F43" />
+            <Feather name="clock" size={24} color="#FF9F43" />
           </View>
-          <Text style={styles.gridText}>Gắn kết</Text>
+          <Text style={styles.gridText}>Lịch sử</Text>
         </Pressable>
 
         <Pressable style={({pressed}) => [styles.gridItem, pressed && styles.pressed]} onPress={() => router.push('/reports')}>

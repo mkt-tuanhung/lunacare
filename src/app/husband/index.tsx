@@ -19,6 +19,8 @@ export default function HusbandCompanion() {
   const [wifeSupportLevel, setWifeSupportLevel] = useState<SupportLevel>(currentSupportLevel);
   const [wifePrediction, setWifePrediction] = useState<any>(prediction);
   const [wifePrefs, setWifePrefs] = useState<any>(preferences);
+  const [wifePerms, setWifePerms] = useState<any>(permissions);
+  const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch dữ liệu thật của vợ từ Supabase
@@ -37,10 +39,21 @@ export default function HusbandCompanion() {
             const hp = data.health_profile as any;
             if (hp.supportLevel) setWifeSupportLevel(hp.supportLevel);
             if (hp.prediction) setWifePrediction(hp.prediction);
-            if (hp.favoriteFoods) setWifePrefs({ ...wifePrefs, favoriteFoods: hp.favoriteFoods });
-            if (hp.comfortItems) setWifePrefs({ ...wifePrefs, comfortItems: hp.comfortItems });
-            if (hp.doNotSay) setWifePrefs({ ...wifePrefs, doNotSay: hp.doNotSay });
+            if (hp.favoriteFoods) setWifePrefs((prev: any) => ({ ...prev, favoriteFoods: hp.favoriteFoods }));
+            if (hp.comfortItems) setWifePrefs((prev: any) => ({ ...prev, comfortItems: hp.comfortItems }));
+            if (hp.doNotSay) setWifePrefs((prev: any) => ({ ...prev, doNotSay: hp.doNotSay }));
+            if (hp.partnerPermissions) setWifePerms(hp.partnerPermissions);
           }
+
+          const { data: logData } = await supabase
+            .from('daily_logs')
+            .select('*')
+            .eq('user_id', profile.partnerId)
+            .order('log_date', { ascending: false })
+            .limit(3);
+          
+          if (logData) setRecentLogs(logData);
+
         } catch (err) {
           console.error('Lỗi khi tải dữ liệu Vợ:', err);
         } finally {
@@ -183,6 +196,34 @@ export default function HusbandCompanion() {
           <Text style={styles.prefValue}>{wifePrefs.comfortItems?.join(', ')}</Text>
         </View>
 
+        {(wifePerms.shareMoodLevel || wifePerms.shareSymptoms) && (
+          <>
+            <Text style={styles.sectionTitle}>Nhật ký gần đây</Text>
+            {recentLogs.length === 0 ? (
+              <View style={styles.emptyLogCard}>
+                <Text style={styles.emptyLogText}>Vợ chưa có ghi nhận nào gần đây.</Text>
+              </View>
+            ) : (
+              recentLogs.map(log => (
+                <View key={log.id} style={styles.logCard}>
+                  <View style={styles.logHeader}>
+                    <Feather name="calendar" size={14} color={colors.primary} />
+                    <Text style={styles.logDate}>{new Date(log.log_date).toLocaleDateString('vi-VN')}</Text>
+                  </View>
+                  
+                  {wifePerms.shareMoodLevel && log.moods && log.moods.length > 0 && (
+                    <Text style={styles.logText}>Tâm trạng: <Text style={{fontWeight: '700'}}>{log.moods.join(', ')}</Text></Text>
+                  )}
+                  
+                  {wifePerms.shareSymptoms && log.symptoms && log.symptoms.length > 0 && (
+                    <Text style={styles.logText}>Triệu chứng: {log.symptoms.join(', ')}</Text>
+                  )}
+                </View>
+              ))
+            )}
+          </>
+        )}
+
       </ScrollView>
     </View>
   );
@@ -227,4 +268,11 @@ const styles = StyleSheet.create({
   preferencesCard: { backgroundColor: colors.card, padding: 20, borderRadius: 24, marginBottom: 30, boxShadow: '0px 4px 12px rgba(0,0,0,0.03)' },
   prefLabel: { fontSize: 14, fontWeight: '700', color: colors.textMuted, marginBottom: 4 },
   prefValue: { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 15 },
+
+  logCard: { backgroundColor: colors.card, padding: 15, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#F0F0F0' },
+  logHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  logDate: { fontSize: 14, fontWeight: '700', color: colors.primaryDark },
+  logText: { fontSize: 14, color: colors.text, marginBottom: 4, lineHeight: 20 },
+  emptyLogCard: { padding: 20, backgroundColor: '#F9F9F9', borderRadius: 16, alignItems: 'center' },
+  emptyLogText: { fontSize: 14, color: colors.textMuted, fontStyle: 'italic' }
 });

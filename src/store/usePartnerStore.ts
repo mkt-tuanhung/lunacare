@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useProfileStore } from './useProfileStore';
 
 export interface PartnerPermissions {
   shareCyclePhase: boolean;
@@ -20,7 +21,7 @@ interface PartnerState {
 
 export const usePartnerStore = create<PartnerState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       isPartnerModeEnabled: false,
       permissions: {
         shareCyclePhase: true,
@@ -31,9 +32,12 @@ export const usePartnerStore = create<PartnerState>()(
         shareSupportLevel: true,
       },
       togglePartnerMode: (enabled) => set({ isPartnerModeEnabled: enabled }),
-      updatePermissions: (perms) => set((state) => ({
-        permissions: { ...state.permissions, ...perms }
-      })),
+      updatePermissions: (perms) => {
+        set((state) => ({ permissions: { ...state.permissions, ...perms } }));
+        const profileStore = useProfileStore.getState();
+        profileStore.updateHealthProfile({ partnerPermissions: { ...get().permissions, ...perms } } as any);
+        profileStore.saveProfileToSupabase();
+      },
     }),
     {
       name: 'lunacare-partner-storage',
