@@ -53,8 +53,9 @@ QUY TẮC BẮT BUỘC (CRITICAL RULES):
 3. LƯU Ý: Tính toán rụng trứng và chu kỳ phải có CƠ SỞ KHOA HỌC. Nếu có dùng thuốc tránh thai khẩn cấp, cân nặng giảm nhanh, mới sẩy thai/sinh con -> Bắt buộc phải điều chỉnh độ dài chu kỳ dài ra và lùi ngày rụng trứng lại thay vì dùng 28 ngày cố định.
 4. QUAN TRỌNG: "predictedCycleLength" PHẢI LÀ SỐ THỰC TẾ (từ 21 đến 55 ngày), tuyệt đối không được trả về các số vô lý như 86, 100, hay 1000. Nếu không chắc chắn, hãy dùng ${healthProfile.cycleLength} ngày.
 5. QUAN TRỌNG: "predictedStartDate" PHẢI LÀ NGÀY TƯƠNG LAI GẦN NHẤT so với Hôm nay, KHÔNG ĐƯỢC xa hơn Hôm nay quá 55 ngày.
-6. LỜI KHUYÊN HÀNG NGÀY: Dựa vào "Ghi nhận sức khỏe hằng ngày" gần nhất và "Thông tin sức khỏe", hãy viết 1 ĐẾN 2 câu ngắn gọn chẩn đoán tình trạng sức khỏe hiện tại và đưa ra lời khuyên thiết thực. Lưu lời khuyên này vào phần tử ĐẦU TIÊN của mảng "notes". BẮT BUỘC PHẢI VIẾT BẰNG TIẾNG VIỆT (VIETNAMESE) 100%.
+6. LỜI KHUYÊN HÀNG NGÀY: Dựa vào "Ghi nhận sức khỏe hằng ngày" gần nhất và "Thông tin sức khỏe", hãy viết 1 ĐẾN 2 câu ngắn gọn chẩn đoán tình trạng sức khỏe hiện tại và đưa ra lời khuyên thiết thực. Lưu lời khuyên này vào phần tử ĐẦU TIÊN của mảng "notes". BẮT BUỘC PHẢI VIẾT LỜI KHUYÊN NÀY BẰNG TIẾNG VIỆT 100%.
 
+TUYỆT ĐỐI KHÔNG ĐƯỢC DỊCH CÁC KEY CỦA JSON SANG TIẾNG VIỆT. GIỮ NGUYÊN TÊN KEY BẰNG TIẾNG ANH NHƯ MẪU DƯỚI ĐÂY!
 Trả lời CHỈ BẰNG 1 CHUỖI JSON HỢP LỆ (KHÔNG chứa markdown code block \`\`\`, KHÔNG có text thừa ngoài JSON), cấu trúc như sau:
 {
   "predictedStartDate": "YYYY-MM-DD",
