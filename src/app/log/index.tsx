@@ -92,6 +92,7 @@ export default function LogToday() {
             // Thử lại nếu user chưa có cột mới
             delete payload.water_cups;
             delete payload.sleep_hours;
+            delete payload.ovulation_signs;
             if (existing) {
               const { error: retryError } = await supabase.from('daily_logs').update(payload).eq('id', existing.id);
               if (retryError) throw retryError;
@@ -113,7 +114,11 @@ export default function LogToday() {
       }
     } catch (err: any) {
       console.error(err);
-      alert('Lỗi lưu dữ liệu: ' + err.message);
+      if (err.message && err.message.includes('schema cache')) {
+        alert("Lỗi Đồng bộ Database Supabase: API Cache đang bị cũ. \n\nVui lòng vào Supabase SQL Editor và chạy lệnh:\nNOTIFY pgrst, 'reload schema';\n\nSau đó thử lại!");
+      } else {
+        alert('Lỗi lưu dữ liệu: ' + err.message);
+      }
     }
   };
 
