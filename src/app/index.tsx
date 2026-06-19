@@ -18,6 +18,11 @@ export default function Index() {
   // Đã đăng nhập nhưng chưa làm khảo sát 20 câu -> Ép vào màn khảo sát
   if (!profile.onboardingCompleted) return <Redirect href="/onboarding" />;
 
-  // Mọi thứ hoàn tất -> Vào Trang chủ
+  // Mọi thứ hoàn tất -> Kiểm tra Role để phân luồng
+  if (profile.role === 'husband') {
+    return <Redirect href="/husband-dashboard" />;
+  }
+
+  // Nếu là Vợ thì vào Trang chủ bình thường
   return <Redirect href="/home" />;
 }

@@ -9,8 +9,6 @@ export default function RootLayout() {
   const profile = useProfileStore((state) => state.profile);
 
   useEffect(() => {
-    // Load giả lập dữ liệu local khi app vừa mở
-    loadSeedData();
     setIsReady(true);
   }, []);
 

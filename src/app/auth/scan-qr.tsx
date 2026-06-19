@@ -2,6 +2,8 @@ import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Camera, CameraView } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
+import { BarCodeScanner } from 'expo-barcode-scanner';
 import { colors } from '../../theme/colors';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/useProfileStore';
@@ -44,6 +46,27 @@ export default function ScanQR() {
     } else {
       alert('Mã QR không hợp lệ!');
       setTimeout(() => setScanned(false), 2000);
+    }
+  };
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      try {
+        const scannedResults = await BarCodeScanner.scanFromURLAsync(result.assets[0].uri);
+        if (scannedResults && scannedResults.length > 0) {
+          handleBarCodeScanned({ type: 'qr', data: scannedResults[0].data });
+        } else {
+          alert('Không tìm thấy mã QR nào trong ảnh này!');
+        }
+      } catch (error) {
+        alert('Lỗi khi đọc ảnh QR!');
+      }
     }
   };
 
@@ -98,9 +121,14 @@ export default function ScanQR() {
           <View style={styles.instructionBox}>
             <FontAwesome5 name="qrcode" size={24} color={colors.primary} />
             <Text style={styles.instructionText}>
-              Đưa Camera vào mã QR trên máy của Vợ để thiết lập kết nối ngay lập tức.
+              Đưa Camera vào mã QR trên máy của Vợ để kết nối.
             </Text>
           </View>
+          
+          <Pressable style={styles.uploadBtn} onPress={pickImage}>
+            <Feather name="image" size={20} color="white" />
+            <Text style={styles.uploadBtnText}>Hoặc Tải ảnh mã QR từ Thư viện</Text>
+          </Pressable>
         </View>
       </View>
     </View>
@@ -127,6 +155,9 @@ const styles = StyleSheet.create({
   laserLine: { width: '100%', height: 2, backgroundColor: colors.primary, top: '50%', boxShadow: '0px 0px 10px rgba(255, 141, 161, 1)' },
 
   footer: { padding: 30, paddingBottom: 50 },
-  instructionBox: { flexDirection: 'row', backgroundColor: 'white', padding: 20, borderRadius: 20, alignItems: 'center', gap: 15 },
-  instructionText: { flex: 1, fontSize: 14, color: '#333', fontWeight: '600', lineHeight: 22 }
+  instructionBox: { flexDirection: 'row', backgroundColor: 'white', padding: 20, borderRadius: 20, alignItems: 'center', gap: 15, marginBottom: 15 },
+  instructionText: { flex: 1, fontSize: 14, color: '#333', fontWeight: '600', lineHeight: 22 },
+  
+  uploadBtn: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.2)', padding: 18, borderRadius: 20, alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' },
+  uploadBtnText: { color: 'white', fontSize: 16, fontWeight: '700' }
 });
