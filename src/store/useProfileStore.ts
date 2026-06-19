@@ -30,6 +30,10 @@ export interface HealthProfile {
   worstSymptoms: string[];
   emotionalSymptoms: string[];
   partnerRequests: string;
+  
+  // Nhóm 5: Partner Sync
+  supportLevel?: string;
+  prediction?: any;
 }
 
 interface ProfileState {
@@ -39,6 +43,7 @@ interface ProfileState {
     onboardingCompleted: boolean;
     healthProfile: HealthProfile | null;
     role?: string;
+    partnerId?: string; // ID của vợ nếu người này là chồng
   } | null;
   setProfile: (profile: any) => void;
   updateHealthProfile: (data: Partial<HealthProfile>) => void;

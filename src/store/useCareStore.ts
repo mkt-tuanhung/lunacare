@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useProfileStore } from './useProfileStore';
 
 export type SupportLevel = 'green' | 'yellow' | 'orange' | 'red';
 
@@ -26,10 +27,16 @@ export const useCareStore = create<CareState>()(
         comfortItems: ['Túi chườm nóng', 'Chăn mỏng'],
         doNotSay: ['Em lại đến tháng à?', 'Đau có tí mà cũng than'],
       },
-      setSupportLevel: (level) => set({ currentSupportLevel: level }),
-      updatePreferences: (prefs) => set((state) => ({
-        preferences: { ...state.preferences, ...prefs }
-      })),
+      setSupportLevel: (level) => {
+        set({ currentSupportLevel: level });
+        // Sync to cloud for husband
+        const profileStore = useProfileStore.getState();
+        profileStore.updateHealthProfile({ supportLevel: level });
+        profileStore.saveProfileToSupabase();
+      },
+      updatePreferences: (prefs) => {
+        set((state) => ({ preferences: { ...state.preferences, ...prefs } }));
+      },
     }),
     {
       name: 'lunacare-care-storage',

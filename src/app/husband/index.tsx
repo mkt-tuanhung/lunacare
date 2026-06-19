@@ -3,15 +3,57 @@ import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { Feather, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { usePartnerStore } from '../../store/usePartnerStore';
-import { useCareStore } from '../../store/useCareStore';
+import { useCareStore, SupportLevel } from '../../store/useCareStore';
 import { useCycleStore } from '../../store/useCycleStore';
-import { useState } from 'react';
+import { useProfileStore } from '../../store/useProfileStore';
+import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 
 export default function HusbandCompanion() {
   const router = useRouter();
   const { isPartnerModeEnabled, permissions } = usePartnerStore();
   const { currentSupportLevel, preferences } = useCareStore();
   const { prediction } = useCycleStore();
+  const { profile } = useProfileStore();
+  
+  const [wifeSupportLevel, setWifeSupportLevel] = useState<SupportLevel>(currentSupportLevel);
+  const [wifePrediction, setWifePrediction] = useState<any>(prediction);
+  const [wifePrefs, setWifePrefs] = useState<any>(preferences);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch dữ liệu thật của vợ từ Supabase
+  useEffect(() => {
+    async function fetchWifeData() {
+      if (profile?.role === 'husband' && profile?.partnerId) {
+        try {
+          setIsLoading(true);
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('health_profile')
+            .eq('id', profile.partnerId)
+            .single();
+
+          if (data?.health_profile) {
+            const hp = data.health_profile as any;
+            if (hp.supportLevel) setWifeSupportLevel(hp.supportLevel);
+            if (hp.prediction) setWifePrediction(hp.prediction);
+            if (hp.favoriteFoods) setWifePrefs({ ...wifePrefs, favoriteFoods: hp.favoriteFoods });
+            if (hp.comfortItems) setWifePrefs({ ...wifePrefs, comfortItems: hp.comfortItems });
+            if (hp.doNotSay) setWifePrefs({ ...wifePrefs, doNotSay: hp.doNotSay });
+          }
+        } catch (err) {
+          console.error('Lỗi khi tải dữ liệu Vợ:', err);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        // Nếu dùng ở chế độ mock test
+        setIsLoading(false);
+      }
+    }
+    
+    fetchWifeData();
+  }, [profile?.partnerId]);
   
   const [tasks, setTasks] = useState([
     { id: 1, title: 'Hỏi vợ hôm nay có đau bụng không', done: false },
@@ -24,7 +66,7 @@ export default function HusbandCompanion() {
     setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
   };
 
-  if (!isPartnerModeEnabled) {
+  if (!isPartnerModeEnabled && profile?.role !== 'husband') {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -44,7 +86,7 @@ export default function HusbandCompanion() {
   }
 
   const getLevelUI = () => {
-    switch(currentSupportLevel) {
+    switch(wifeSupportLevel) {
       case 'green': return { color: '#4CAF50', text: 'Vợ Đang Ổn', icon: 'leaf', msg: 'Mọi thứ bình thường. Hãy giữ nhịp độ chăm sóc như mọi ngày nhé!' };
       case 'yellow': return { color: '#FFC107', text: 'Vợ Hơi Mệt', icon: 'weather-partly-cloudy', msg: 'Cô ấy có vẻ cần được nghỉ ngơi thêm một chút. Hãy chủ động giúp việc nhà nhé.' };
       case 'orange': return { color: '#FF9800', text: 'Vợ Cần Hỗ Trợ', icon: 'fire', msg: 'Hôm nay cơ thể cô ấy khá khó chịu. Hãy hỏi xem cô ấy cần gì và chuẩn bị đồ ăn ngon nhé.' };
@@ -61,7 +103,7 @@ export default function HusbandCompanion() {
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={28} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Góc Của Chồng</Text>
+        <Text style={styles.headerTitle}>Góc Của Chồng {isLoading && '(Đang đồng bộ...)'}</Text>
         <View style={styles.backBtn} />
       </View>
 
@@ -77,10 +119,10 @@ export default function HusbandCompanion() {
           </View>
         )}
 
-        {permissions.shareCyclePhase && prediction?.predictedStartDate && (
+        {(permissions.shareCyclePhase || profile?.role === 'husband') && wifePrediction?.predictedStartDate && (
           <View style={styles.infoCard}>
             <Feather name="calendar" size={20} color={colors.primary} />
-            <Text style={styles.infoCardText}>Kỳ kinh tiếp theo dự kiến vào: <Text style={{fontWeight: '800'}}>{new Date(prediction.predictedStartDate).toLocaleDateString('vi-VN')}</Text></Text>
+            <Text style={styles.infoCardText}>Kỳ kinh tiếp theo dự kiến vào: <Text style={{fontWeight: '800'}}>{new Date(wifePrediction.predictedStartDate).toLocaleDateString('vi-VN')}</Text></Text>
           </View>
         )}
 
@@ -120,7 +162,7 @@ export default function HusbandCompanion() {
 
         <Text style={styles.sectionTitle}>Tuyệt Đối Không Nói 🛑</Text>
         <View style={styles.doNotSayCard}>
-          {preferences.doNotSay.map(phrase => (
+          {wifePrefs.doNotSay?.map((phrase: string) => (
             <View key={phrase} style={styles.badPhraseRow}>
               <Feather name="x-circle" size={20} color="#F44336" />
               <Text style={styles.badPhraseText}>{phrase}</Text>
@@ -135,10 +177,10 @@ export default function HusbandCompanion() {
         <Text style={styles.sectionTitle}>Sở thích của Vợ</Text>
         <View style={styles.preferencesCard}>
           <Text style={styles.prefLabel}>Đồ ăn vặt yêu thích:</Text>
-          <Text style={styles.prefValue}>{preferences.favoriteFoods.join(', ')}</Text>
+          <Text style={styles.prefValue}>{wifePrefs.favoriteFoods?.join(', ')}</Text>
           
           <Text style={styles.prefLabel}>Đồ giảm đau:</Text>
-          <Text style={styles.prefValue}>{preferences.comfortItems.join(', ')}</Text>
+          <Text style={styles.prefValue}>{wifePrefs.comfortItems?.join(', ')}</Text>
         </View>
 
       </ScrollView>

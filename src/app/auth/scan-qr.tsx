@@ -28,21 +28,25 @@ export default function ScanQR() {
   const handleBarCodeScanned = ({ type, data }: any) => {
     setScanned(true);
     
-    // Giả sử Data từ QR là chuỗi: "LUNA_CONNECT_xxx"
-    if (data && data.startsWith('LUNA_CONNECT_')) {
-      const wifeId = data.replace('LUNA_CONNECT_', '');
+    if (data && data.length > 5) {
+      // Vì mã QR của Vợ chỉ chứa thẳng UID
+      let wifeId = data;
+      if (data.startsWith('LUNA_CONNECT_')) {
+        wifeId = data.replace('LUNA_CONNECT_', '');
+      }
       
       // Ở đây chúng ta sẽ lưu thông tin Husband vào DB và Store
       setProfile({
-        uid: 'husband_device_123',
+        uid: 'husband_device_' + Math.floor(Math.random() * 10000), // Mock ID cho chồng
         role: 'husband',
         connectedWifeId: wifeId,
         displayName: 'Chồng Yêu',
-        onboardingCompleted: true
+        onboardingCompleted: true,
+        healthProfile: null
       });
 
       // Chuyển sang Giao diện Độc quyền cho Đàn ông
-      router.replace('/husband-dashboard');
+      router.replace('/husband');
     } else {
       alert('Mã QR không hợp lệ!');
       setTimeout(() => setScanned(false), 2000);

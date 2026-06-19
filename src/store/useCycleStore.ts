@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useProfileStore } from './useProfileStore';
 import { PeriodEvent, CyclePrediction } from '../features/cycle/cycle.types';
 import { predictCycle, predictCycleWithAI } from '../features/cycle/cycle.engine';
 
@@ -66,13 +67,19 @@ export const useCycleStore = create<CycleState>()(
       // Gọi AI suy luận
       const aiPrediction = await predictCycleWithAI(cycles);
       
-      if (aiPrediction) {
-        set({ prediction: aiPrediction, isPredicting: false });
-      } else {
+      let finalPrediction = aiPrediction;
+      if (!finalPrediction) {
         // Fallback thuật toán cũ nếu AI lỗi
-        const prediction = predictCycle(cycles);
-        set({ prediction, isPredicting: false });
+        finalPrediction = predictCycle(cycles);
       }
+      
+      set({ prediction: finalPrediction, isPredicting: false });
+      
+      // Sync prediction to Supabase for husband
+      const profileStore = useProfileStore.getState();
+      profileStore.updateHealthProfile({ prediction: finalPrediction });
+      profileStore.saveProfileToSupabase();
+      
     } catch (error) {
       console.error(error);
       const { periodEvents } = get();
