@@ -178,7 +178,9 @@ export function predictCycle(cycles: Cycle[]): CyclePrediction {
     // NẾU CHƯA CÓ LỊCH SỬ NÀO -> Dự đoán hoàn toàn dựa trên dữ liệu nhập lúc Onboarding
     if (healthProfile?.lastPeriodDate && healthProfile?.cycleLength) {
       
-      let baseCycleLength = healthProfile.cycleLength;
+      // FIX LỖI: parse sang số nguyên để không bị cộng chuỗi "28" + 2 = "282"
+      let baseCycleLength = parseInt(String(healthProfile.cycleLength)) || 28;
+      let periodDuration = parseInt(String(healthProfile.periodDuration)) || 5;
       
       // 1. ĐIỀU CHỈNH ĐỘ DÀI CHU KỲ DỰA TRÊN CÂU HỎI CHUYÊN SÂU
       if (healthProfile.stressLevel === 'Rất cao') {
@@ -236,7 +238,13 @@ export function predictCycle(cycles: Cycle[]): CyclePrediction {
           loopCount++;
       }
       
-      const pEndDate = addDays(pStartDate, healthProfile.periodDuration - 1);
+      // NẾU TUA QUÁ ĐÀ
+      const diffDaysAfterLoop = (new Date(pStartDate).getTime() - today.getTime()) / DAY_MS;
+      if (diffDaysAfterLoop > 45) {
+          pStartDate = addDays(today.toISOString().slice(0, 10), 0);
+      }
+      
+      const pEndDate = addDays(pStartDate, periodDuration - 1);
       
       // 2. ĐIỀU CHỈNH NGÀY RỤNG TRỨNG (Pha Hoàng Thể)
       let lutealPhase = 14;
@@ -286,7 +294,7 @@ export function predictCycle(cycles: Cycle[]): CyclePrediction {
   const cleanCycleLengths = filterOutliers(rawCycleLengths);
   
   // 2. Tính trung bình có trọng số (ưu tiên chu kỳ gần nhất)
-  let predictedCycleLength = cleanCycleLengths.length > 0 ? weightedAverage(cleanCycleLengths) : (healthProfile?.cycleLength || 28);
+  let predictedCycleLength = cleanCycleLengths.length > 0 ? weightedAverage(cleanCycleLengths) : (parseInt(String(healthProfile?.cycleLength)) || 28);
   
   // 3. Hiệu chỉnh thuật toán dựa vào Lối Sống (Lifestyle Adjustments)
   let modifierNotes = [];
@@ -302,7 +310,7 @@ export function predictCycle(cycles: Cycle[]): CyclePrediction {
   }
 
   const periodLengths = sorted.filter(c => c.endDate).map(c => daysBetween(c.startDate, c.endDate as string) + 1);
-  const predictedPeriodLength = periodLengths.length > 0 ? weightedAverage(periodLengths) : (healthProfile?.periodDuration || 5);
+  const predictedPeriodLength = periodLengths.length > 0 ? weightedAverage(periodLengths) : (parseInt(String(healthProfile?.periodDuration)) || 5);
 
   const lastCycle = sorted[sorted.length - 1];
   let predictedStartDate = addDays(lastCycle.startDate, predictedCycleLength);

@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions } from 'react-native';
+import { useEffect } from 'react';
 import { useCycleStore } from '../../store/useCycleStore';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useRouter } from 'expo-router';
@@ -8,9 +9,21 @@ import { Feather, Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/v
 const { width } = Dimensions.get('window');
 
 export default function Home() {
-  const { prediction, isPredicting } = useCycleStore();
+  const { prediction, isPredicting, calculatePrediction } = useCycleStore();
   const profile = useProfileStore((state) => state.profile);
   const router = useRouter();
+
+  // Tự chữa lành lỗi Cache (Nếu App đang load lại dữ liệu cũ bị lỗi 10000+ ngày)
+  useEffect(() => {
+    if (prediction?.predictedStartDate) {
+      const start = new Date(prediction.predictedStartDate).getTime();
+      const diff = (start - new Date().getTime()) / (1000 * 60 * 60 * 24);
+      if (diff > 55 || diff < -55) {
+        console.warn("Phát hiện dữ liệu Cache lỗi (lệch > 55 ngày). Đang gọi AI tính toán lại...");
+        calculatePrediction();
+      }
+    }
+  }, [prediction?.predictedStartDate]);
 
   // Lấy width nhưng giới hạn kích thước tối đa cho web (ví dụ max width của mobile screen)
   const windowWidth = Dimensions.get('window').width;
