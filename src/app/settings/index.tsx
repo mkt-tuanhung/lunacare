@@ -41,8 +41,8 @@ export default function Settings() {
           <View style={styles.divider} />
           <Pressable style={styles.row}>
             <View style={styles.rowLeft}>
-              <Feather name="database" size={22} color={colors.text} />
-              <Text style={styles.rowText}>Sao lưu Supabase</Text>
+              <Feather name="cloud" size={22} color={colors.text} />
+              <Text style={styles.rowText}>Đồng bộ Đám mây (Cloud)</Text>
             </View>
             <Text style={{color: colors.success, fontWeight: '600'}}>Đã bật</Text>
           </Pressable>
