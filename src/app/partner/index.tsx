@@ -121,11 +121,6 @@ export default function PartnerMode() {
               </View>
             </View>
 
-            <Pressable style={styles.inviteBtn} onPress={() => alert('Mã kết nối: LUNA-1234. Gửi mã này cho chồng để liên kết!')}>
-              <MaterialCommunityIcons name="link-variant" size={24} color="white" />
-              <Text style={styles.inviteBtnText}>Lấy Mã Kết Nối</Text>
-            </Pressable>
-
           </View>
         )}
 
