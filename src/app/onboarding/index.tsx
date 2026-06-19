@@ -8,25 +8,25 @@ import { useProfileStore } from '../../store/useProfileStore';
 const { width } = Dimensions.get('window');
 
 const QUESTIONS = [
-  { id: 'displayName', title: 'Tên thân mật của bạn là gì?', type: 'text', isRequired: true },
-  { id: 'goal', title: 'Mục tiêu chính của bạn?', options: ['Theo dõi chu kỳ', 'Mong có em bé', 'Tránh thai tự nhiên'], isRequired: true },
-  { id: 'cycleLength', title: 'Độ dài chu kỳ thường của bạn (ngày)?', type: 'number', isRequired: true },
-  { id: 'periodDuration', title: 'Bạn thường hành kinh mấy ngày?', type: 'number', isRequired: true },
-  { id: 'cycleRegularity', title: 'Chu kỳ của bạn có đều không?', options: ['Rất đều', 'Dao động ±3 ngày', 'Rất thất thường'], isRequired: false },
-  { id: 'birthControl', title: 'Bạn có dùng thuốc tránh thai nội tiết?', options: ['Không', 'Thuốc hàng ngày', 'Cấy que/Vòng'], isRequired: false },
-  { id: 'medicalConditions', title: 'Bạn có mắc hội chứng nào sau đây?', options: ['Không có', 'PCOS', 'Lạc nội mạc tử cung'], multi: true, isRequired: false },
+  { id: 'displayName', title: 'Tên thân mật của Vợ là gì?', type: 'text', isRequired: true },
+  { id: 'goal', title: 'Mục tiêu chính của Vợ?', options: ['Theo dõi chu kỳ', 'Mong có em bé', 'Tránh thai tự nhiên'], isRequired: true },
+  { id: 'cycleLength', title: 'Độ dài chu kỳ thường của Vợ (ngày)?', type: 'number', isRequired: true },
+  { id: 'periodDuration', title: 'Vợ thường hành kinh mấy ngày?', type: 'number', isRequired: true },
+  { id: 'cycleRegularity', title: 'Chu kỳ của Vợ có đều không?', options: ['Rất đều', 'Dao động ±3 ngày', 'Rất thất thường'], isRequired: false },
+  { id: 'birthControl', title: 'Vợ có dùng thuốc tránh thai nội tiết?', options: ['Không', 'Thuốc hàng ngày', 'Cấy que/Vòng'], isRequired: false },
+  { id: 'medicalConditions', title: 'Vợ có mắc hội chứng nào sau đây?', options: ['Không có', 'PCOS', 'Lạc nội mạc tử cung'], multi: true, isRequired: false },
   { id: 'flowLevel', title: 'Lượng máu kinh thường thế nào?', options: ['Rất ít', 'Bình thường', 'Rất nhiều'], isRequired: false },
   { id: 'crampsSeverity', title: 'Mức độ đau bụng kinh?', options: ['Không đau', 'Đau nhẹ', 'Đau dữ dội'], isRequired: false },
   { id: 'pmsSeverity', title: 'Hội chứng tiền kinh nguyệt (PMS)?', options: ['Không bị', 'Khó chịu nhẹ', 'Rất mệt mỏi/Cáu gắt'], isRequired: false },
-  { id: 'sleepHours', title: 'Bạn ngủ mấy tiếng/đêm?', options: ['< 5 tiếng', '6-7 tiếng', '8+ tiếng'], isRequired: false },
+  { id: 'sleepHours', title: 'Vợ ngủ mấy tiếng/đêm?', options: ['< 5 tiếng', '6-7 tiếng', '8+ tiếng'], isRequired: false },
   { id: 'sleepQuality', title: 'Chất lượng giấc ngủ?', options: ['Ngủ sâu', 'Hay thức giấc', 'Mất ngủ'], isRequired: false },
-  { id: 'stressLevel', title: 'Mức độ Stress hiện tại?', options: ['Thấp', 'Trung bình', 'Rất cao'], isRequired: false },
-  { id: 'activityLevel', title: 'Bạn có hay tập thể dục?', options: ['Không tập', 'Tập nhẹ', 'Cường độ cao'], isRequired: false },
-  { id: 'diet', title: 'Chế độ ăn của bạn?', options: ['Bình thường', 'Ăn chay', 'Ăn kiêng'], isRequired: false },
-  { id: 'comfortItems', title: 'Tới tháng bạn thích làm gì?', options: ['Uống trà ấm', 'Chườm nóng', 'Ăn ngọt', 'Nằm ngủ'], multi: true, isRequired: false },
+  { id: 'stressLevel', title: 'Mức độ Stress hiện tại của Vợ?', options: ['Thấp', 'Trung bình', 'Rất cao'], isRequired: false },
+  { id: 'activityLevel', title: 'Vợ có hay tập thể dục?', options: ['Không tập', 'Tập nhẹ', 'Cường độ cao'], isRequired: false },
+  { id: 'diet', title: 'Chế độ ăn của Vợ?', options: ['Bình thường', 'Ăn chay', 'Ăn kiêng'], isRequired: false },
+  { id: 'comfortItems', title: 'Tới tháng Vợ thích làm gì?', options: ['Uống trà ấm', 'Chườm nóng', 'Ăn ngọt', 'Nằm ngủ'], multi: true, isRequired: false },
   { id: 'worstSymptoms', title: 'Triệu chứng ghét nhất?', options: ['Đau lưng', 'Nổi mụn', 'Đau đầu', 'Chướng bụng'], multi: true, isRequired: false },
   { id: 'emotionalSymptoms', title: 'Cảm xúc hay gặp lúc tới tháng?', options: ['Dễ khóc', 'Cáu gắt', 'Trống rỗng'], multi: true, isRequired: false },
-  { id: 'partnerRequests', title: 'Muốn chồng mua gì khi đau?', type: 'text', isRequired: false }
+  { id: 'partnerRequests', title: 'Vợ muốn chồng mua gì khi đau?', type: 'text', isRequired: false }
 ];
 
 export default function DeepOnboarding() {
@@ -64,7 +64,8 @@ export default function DeepOnboarding() {
       }
     } else {
       setAnswers({...answers, [q.id]: val});
-      setTimeout(handleNext, 300);
+      // Đã XÓA dòng tự động nhảy câu hỏi (setTimeout).
+      // Bây giờ người dùng BẮT BUỘC phải bấm nút Tiếp tục.
     }
   };
 
