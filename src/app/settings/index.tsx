@@ -4,6 +4,8 @@ import { colors } from '../../theme/colors';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../../lib/supabase';
+import { useProfileStore } from '../../store/useProfileStore';
 
 export default function Settings() {
   const router = useRouter();
@@ -11,10 +13,23 @@ export default function Settings() {
   const [hideNotifications, setHideNotifications] = useState(true);
 
   const handleDeleteData = async () => {
+    const doDelete = async () => {
+      const { profile } = useProfileStore.getState();
+      if (profile?.uid) {
+        try {
+          await supabase.from('daily_logs').delete().eq('user_id', profile.uid);
+          await supabase.from('profiles').update({ is_onboarded: false, health_profile: null }).eq('id', profile.uid);
+        } catch(e) {
+          console.error(e);
+        }
+      }
+      await AsyncStorage.clear();
+      alert('Đã xóa toàn bộ dữ liệu! Vui lòng khởi động lại ứng dụng để bắt đầu lại từ đầu.');
+    };
+
     if (typeof window !== 'undefined' && window.confirm) {
       if (window.confirm("Bạn có chắc chắn muốn xóa toàn bộ dữ liệu? Hành động này không thể hoàn tác.")) {
-        await AsyncStorage.clear();
-        alert('Đã xóa toàn bộ dữ liệu! Vui lòng tải lại trang (F5) để bắt đầu lại từ đầu.');
+        await doDelete();
       }
     } else {
       Alert.alert(
@@ -22,10 +37,7 @@ export default function Settings() {
         "Bạn có chắc chắn muốn xóa toàn bộ dữ liệu? Hành động này không thể hoàn tác.",
         [
           { text: "Hủy", style: "cancel" },
-          { text: "Xóa", style: "destructive", onPress: async () => {
-            await AsyncStorage.clear();
-            alert('Đã xóa toàn bộ dữ liệu! Vui lòng tải lại trang (F5) để bắt đầu lại từ đầu.');
-          } }
+          { text: "Xóa", style: "destructive", onPress: doDelete }
         ]
       );
     }

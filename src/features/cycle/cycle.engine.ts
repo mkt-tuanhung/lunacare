@@ -12,16 +12,27 @@ export async function predictCycleWithAI(cycles: Cycle[]): Promise<CyclePredicti
     : `Chưa có lịch sử. Thông tin tham khảo: Kinh gần nhất ${healthProfile.lastPeriodDate}, chu kỳ ${healthProfile.cycleLength} ngày, kéo dài ${healthProfile.periodDuration} ngày.`;
 
   const systemPrompt = `
-Bạn là một AI phân tích chu kỳ kinh nguyệt thông minh.
-Dưới đây là lịch sử chu kỳ và thông tin sức khỏe của người dùng:
-- Lịch sử: ${historyStr}
+Bạn là một AI chuyên gia Y Tế phụ sản phân tích chu kỳ kinh nguyệt thông minh. Nhiệm vụ của bạn là dự đoán chu kỳ KẾ TIẾP (gần nhất ở hiện tại/tương lai) của người dùng.
+Dưới đây là lịch sử chu kỳ và thông tin sức khỏe:
+- Lịch sử chu kỳ đã ghi nhận: ${historyStr}
+- Độ dài chu kỳ trung bình người dùng khai báo: ${healthProfile.cycleLength} ngày.
+- Số ngày hành kinh trung bình khai báo: ${healthProfile.periodDuration} ngày.
 - Goal: ${healthProfile.goal}
 - Stress: ${healthProfile.stressLevel}
 - Ngủ: ${healthProfile.sleepHours} (${healthProfile.sleepQuality})
 - Tránh thai: ${healthProfile.birthControl}
 - Bệnh lý: ${healthProfile.medicalConditions?.join(', ')}
 
-Hãy phân tích và tính toán chính xác chu kỳ tiếp theo. Trả lời CHỈ BẰNG 1 CHUỖI JSON HỢP LỆ (KHÔNG chứa markdown code block, KHÔNG có text thừa), với cấu trúc sau:
+Hôm nay là: ${new Date().toISOString().split('T')[0]}.
+
+QUY TẮC BẮT BUỘC (CRITICAL RULES):
+1. KHÔNG BAO GIỜ dự đoán chu kỳ kế tiếp cách hiện tại hoặc cách chu kỳ cuối cùng hàng trăm/nghìn ngày. Nếu lần ghi nhận gần nhất cách đây vài tháng hoặc vài năm, bạn PHẢI tự động "tua" (cộng thêm các chu kỳ 28-30 ngày) cho đến khi ra được ngày bắt đầu chu kỳ gần với "Hôm nay" nhất.
+2. NẾU người dùng KHÔNG CÓ lịch sử (Chưa rõ), hãy dùng thông tin khai báo ban đầu để tính toán chu kỳ kế tiếp từ "Kinh gần nhất".
+3. LƯU Ý: Ngày rụng trứng = predictedStartDate trừ 14 ngày. Khoảng thụ thai = rụng trứng - 5 ngày đến + 1 ngày.
+4. QUAN TRỌNG: "predictedCycleLength" PHẢI LÀ SỐ THỰC TẾ (từ 21 đến 45 ngày), tuyệt đối không được trả về các số vô lý như 86, 100, hay 1000. Nếu không chắc chắn, hãy dùng ${healthProfile.cycleLength} ngày.
+5. QUAN TRỌNG: "predictedStartDate" PHẢI LÀ NGÀY TƯƠNG LAI GẦN NHẤT so với Hôm nay, KHÔNG ĐƯỢC xa hơn Hôm nay quá 45 ngày.
+
+Trả lời CHỈ BẰNG 1 CHUỖI JSON HỢP LỆ (KHÔNG chứa markdown code block \`\`\`, KHÔNG có text thừa ngoài JSON), cấu trúc như sau:
 {
   "predictedStartDate": "YYYY-MM-DD",
   "predictedEndDate": "YYYY-MM-DD",
@@ -36,8 +47,6 @@ Hãy phân tích và tính toán chính xác chu kỳ tiếp theo. Trả lời C
   "confidenceScore": number,
   "notes": ["lời giải thích ngắn gọn tại sao dự đoán như vậy"]
 }
-Lưu ý quan trọng: Ngày rụng trứng = predictedStartDate trừ 14 ngày. Khoảng thụ thai = rụng trứng - 5 ngày đến + 1 ngày.
-Hôm nay là: ${new Date().toISOString().split('T')[0]}. Hãy đảm bảo kết quả tính toán hợp lý với thời gian hiện tại và loại bỏ các lỗi outlier (ví dụ ngắt quãng 86 ngày) bằng cách giả định người dùng quên log hoặc tính dựa vào ngày log mới nhất.
 `;
 
   try {
@@ -67,8 +76,25 @@ Hôm nay là: ${new Date().toISOString().split('T')[0]}. Hãy đảm bảo kết
     if (!textResult) return null;
 
     // Loại bỏ markdown (nếu có)
-    const cleanJson = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
+    const match = textResult.match(/\{[\s\S]*\}/);
+    const cleanJson = match ? match[0] : textResult.replace(/```json/g, '').replace(/```/g, '').trim();
     const prediction: CyclePrediction = JSON.parse(cleanJson);
+    
+    // VALIDATE KẾT QUẢ CỦA AI NẾU NÓ QUÁ VÔ LÝ
+    if (prediction.predictedCycleLength > 45 || prediction.predictedCycleLength < 20) {
+       prediction.predictedCycleLength = healthProfile.cycleLength || 28;
+    }
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const predictedStart = new Date(prediction.predictedStartDate);
+    predictedStart.setHours(0,0,0,0);
+    const DAY_MS = 1000 * 60 * 60 * 24;
+    const diffDays = (predictedStart.getTime() - today.getTime()) / DAY_MS;
+    if (diffDays > 45 || diffDays < -45) {
+       throw new Error("AI dự đoán ngày quá vô lý (lệch hơn 45 ngày so với hiện tại).");
+    }
+
+    console.log("AI Prediction Success", prediction);
     return prediction;
 
   } catch (err) {
@@ -126,7 +152,16 @@ export function predictCycle(cycles: Cycle[]): CyclePrediction {
   if (!sorted.length) {
     // NẾU CHƯA CÓ LỊCH SỬ NÀO -> Dự đoán hoàn toàn dựa trên dữ liệu nhập lúc Onboarding
     if (healthProfile?.lastPeriodDate && healthProfile?.cycleLength) {
-      const pStartDate = addDays(healthProfile.lastPeriodDate, healthProfile.cycleLength);
+      let pStartDate = addDays(healthProfile.lastPeriodDate, healthProfile.cycleLength);
+      
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      let loopCount = 0;
+      while (new Date(pStartDate).getTime() < today.getTime() && loopCount < 100) { 
+          pStartDate = addDays(pStartDate, healthProfile.cycleLength);
+          loopCount++;
+      }
+      
       const pEndDate = addDays(pStartDate, healthProfile.periodDuration - 1);
       const ovDate = addDays(pStartDate, -14); // Luteal Phase = 14
       return {
@@ -181,7 +216,20 @@ export function predictCycle(cycles: Cycle[]): CyclePrediction {
   const predictedPeriodLength = periodLengths.length > 0 ? weightedAverage(periodLengths) : (healthProfile?.periodDuration || 5);
 
   const lastCycle = sorted[sorted.length - 1];
-  const predictedStartDate = addDays(lastCycle.startDate, predictedCycleLength);
+  let predictedStartDate = addDays(lastCycle.startDate, predictedCycleLength);
+  
+  // Xử lý Outlier cực nặng (Ví dụ: Nhập 1 chu kỳ từ 3 năm trước, thuật toán chay sẽ tính ra ngày hôm nay là ngày thứ 1000 của chu kỳ)
+  // Nếu ngày dự đoán < ngày hôm nay -> Người dùng đã quên nhập trong 1 thời gian dài -> Tự động tua (Fast-forward) chu kỳ đến hiện tại
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  
+  let loopCount = 0;
+  // Giới hạn max 100 tháng = khoảng 8 năm để tránh lặp vô hạn nếu có lỗi dữ liệu
+  while (new Date(predictedStartDate).getTime() < today.getTime() && loopCount < 100) { 
+      predictedStartDate = addDays(predictedStartDate, predictedCycleLength);
+      loopCount++;
+  }
+  
   const predictedEndDate = addDays(predictedStartDate, predictedPeriodLength - 1);
 
   // 4. Tính toán Pha Hoàng Thể (Luteal Phase Logic)

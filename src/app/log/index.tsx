@@ -58,7 +58,7 @@ export default function LogToday() {
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      const { error } = await supabase.from('daily_logs').upsert({
+      const payload: any = {
         user_id: profile.uid,
         log_date: today,
         is_period_day: isPeriodDay,
@@ -69,17 +69,42 @@ export default function LogToday() {
         sleep_hours: sleepHours ? parseFloat(sleepHours) : null,
         ovulation_signs: selectedOvulations,
         notes: ''
-      }, { onConflict: 'user_id,log_date' });
-      
-      if (error) {
-        if (error.message.includes('schema cache') || error.message.includes('does not exist') || error.message.includes('column')) {
-            alert('Lỗi Đồng bộ Supabase: Database của bạn chưa cập nhật các cột mới (sleep_hours, water_cups...). Bạn hãy vào Supabase SQL Editor và chạy lệnh: NOTIFY pgrst, "reload schema"; để sửa lỗi này nhé!');
-        } else {
-            throw error;
-        }
+      };
+
+      const { data: existing } = await supabase
+        .from('daily_logs')
+        .select('id')
+        .eq('user_id', profile.uid)
+        .eq('log_date', today)
+        .single();
+
+      let dbError;
+      if (existing) {
+        const { error } = await supabase.from('daily_logs').update(payload).eq('id', existing.id);
+        dbError = error;
       } else {
-        alert('Đã lưu Ghi nhận thành công!');
+        const { error } = await supabase.from('daily_logs').insert([payload]);
+        dbError = error;
       }
+      
+      if (dbError) {
+        if (dbError.message.includes('schema cache') || dbError.message.includes('does not exist') || dbError.message.includes('column')) {
+            // Thử lại nếu user chưa có cột mới
+            delete payload.water_cups;
+            delete payload.sleep_hours;
+            if (existing) {
+              const { error: retryError } = await supabase.from('daily_logs').update(payload).eq('id', existing.id);
+              if (retryError) throw retryError;
+            } else {
+              const { error: retryError } = await supabase.from('daily_logs').insert([payload]);
+              if (retryError) throw retryError;
+            }
+        } else {
+            throw dbError;
+        }
+      }
+
+      alert('Đã lưu Ghi nhận thành công!');
       
       if (router.canGoBack()) {
         router.back();

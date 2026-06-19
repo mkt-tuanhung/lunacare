@@ -41,21 +41,13 @@ export default function PartnerMode() {
             
             <View style={styles.codeContainer}>
               {profile?.uid ? (
-                <>
-                  <Image 
-                    source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${profile.uid}` }} 
-                    style={{ width: 180, height: 180, marginBottom: 20 }} 
-                  />
-                  <Text style={styles.codeText}>{profile.uid}</Text>
-                </>
+                <Image 
+                  source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${profile.uid}` }} 
+                  style={{ width: 180, height: 180 }} 
+                />
               ) : (
-                <Text style={styles.codeText}>Đang tải UID...</Text>
+                <Text style={styles.codeText}>Đang tải QR Code...</Text>
               )}
-              
-              <Pressable style={styles.copyBtn} onPress={() => alert('Đã chép vào bộ nhớ tạm!')}>
-                <Feather name="copy" size={20} color={colors.primary} />
-                <Text style={styles.copyText}>Sao chép mã văn bản</Text>
-              </Pressable>
             </View>
 
             <Text style={styles.sectionTitle}>Quản lý Quyền Truy Cập</Text>
