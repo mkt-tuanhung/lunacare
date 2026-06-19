@@ -115,7 +115,7 @@ export default function LogToday() {
     } catch (err: any) {
       console.error(err);
       if (err.message && err.message.includes('schema cache')) {
-        alert("Lỗi Đồng bộ Database Supabase: API Cache đang bị cũ. \n\nVui lòng vào Supabase SQL Editor và chạy lệnh:\nNOTIFY pgrst, 'reload schema';\n\nSau đó thử lại!");
+        alert("Lỗi Bảng Dữ Liệu Supabase: Bảng daily_logs của bạn đang bị thiếu cột (chưa được tạo đúng chuẩn).\n\nVui lòng mở file fix_daily_logs.sql, copy toàn bộ nội dung và chạy trong Supabase SQL Editor để tự động sửa lỗi này!");
       } else {
         alert('Lỗi lưu dữ liệu: ' + err.message);
       }
