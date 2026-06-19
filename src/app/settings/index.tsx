@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Settings() {
   const router = useRouter();
@@ -15,7 +16,10 @@ export default function Settings() {
       "Bạn có chắc chắn muốn xóa toàn bộ dữ liệu? Hành động này không thể hoàn tác.",
       [
         { text: "Hủy", style: "cancel" },
-        { text: "Xóa", style: "destructive", onPress: () => alert('Đã xóa toàn bộ dữ liệu!') }
+        { text: "Xóa", style: "destructive", onPress: async () => {
+          await AsyncStorage.clear();
+          alert('Đã xóa toàn bộ dữ liệu! Vui lòng tải lại trang (F5) để bắt đầu lại từ đầu.');
+        } }
       ]
     );
   };

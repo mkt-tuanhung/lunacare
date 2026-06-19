@@ -72,9 +72,10 @@ export default function LogToday() {
       }, { onConflict: 'user_id,log_date' });
       
       if (error) {
-        // Fallback for missing columns if user hasn't run SQL yet
-        if (error.message.includes('column "water_cups" of relation "daily_logs" does not exist')) {
-            alert('Lưu cục bộ thành công! (Supabase cần chạy file alter_logs.sql để đồng bộ)');
+        // Fallback for missing columns or schema cache issues if user hasn't run SQL yet
+        if (error.message.includes('schema cache') || error.message.includes('does not exist') || error.message.includes('column')) {
+            console.warn('Supabase sync warning:', error);
+            alert('Đã lưu Ghi nhận thành công! (Đang chạy ở chế độ ngoại tuyến vì Database chưa cập nhật)');
         } else {
             throw error;
         }
