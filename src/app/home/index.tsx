@@ -16,12 +16,37 @@ export default function Home() {
   const windowWidth = Dimensions.get('window').width;
   const screenWidth = Math.min(windowWidth, 400); // Giới hạn width như trên điện thoại
 
-  // Tính số ngày tới kỳ tiếp theo
-  let daysLeft = null;
-  if (prediction?.predictedStartDate) {
-    const start = new Date(prediction.predictedStartDate).getTime();
-    const now = new Date().getTime();
-    daysLeft = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
+  let statusText = '';
+  let statusNumber: number | string = 0;
+  let isDelayed = false;
+  let delayedDays = 0;
+
+  if (prediction?.predictedStartDate && prediction?.predictedEndDate) {
+    // Để loại bỏ sai số giờ giấc, đưa tất cả về cùng thời điểm đầu ngày (00:00)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const now = today.getTime();
+
+    const startDate = new Date(prediction.predictedStartDate);
+    startDate.setHours(0, 0, 0, 0);
+    const start = startDate.getTime();
+
+    const endDate = new Date(prediction.predictedEndDate);
+    endDate.setHours(0, 0, 0, 0);
+    const end = endDate.getTime();
+    
+    if (now < start) {
+      statusNumber = Math.round((start - now) / (1000 * 60 * 60 * 24));
+      statusText = 'Ngày nữa tới kỳ';
+    } else if (now >= start && now <= end) {
+      statusNumber = Math.round((now - start) / (1000 * 60 * 60 * 24)) + 1;
+      statusText = 'Ngày của chu kỳ';
+    } else {
+      isDelayed = true;
+      delayedDays = Math.round((now - end) / (1000 * 60 * 60 * 24));
+      statusNumber = delayedDays;
+      statusText = 'Ngày trễ kinh';
+    }
   }
 
   return (
@@ -49,24 +74,39 @@ export default function Home() {
 
         {prediction ? (
           <View style={styles.circleContainer}>
-            <View style={styles.largeCircle}>
-              <View style={styles.innerCircle}>
-                {daysLeft !== null && daysLeft <= 0 && daysLeft >= -7 ? (
-                  <View style={{alignItems: 'center'}}>
-                    <Text style={[styles.daysNumber, { fontSize: 40 }]}>Ngày {-daysLeft + 1}</Text>
-                    <Text style={styles.daysText}>Của chu kỳ</Text>
-                  </View>
-                ) : (
-                  <View style={{alignItems: 'center'}}>
-                    <Text style={styles.daysNumber}>{daysLeft !== null && daysLeft > 0 ? daysLeft : 0}</Text>
-                    <Text style={styles.daysText}>Ngày nữa tới kỳ</Text>
-                  </View>
-                )}
+            <View style={[styles.largeCircle, isDelayed && { borderColor: '#F44336' }]}>
+              <View style={[styles.innerCircle, isDelayed && { backgroundColor: '#FFEBEE' }]}>
+                <View style={{alignItems: 'center'}}>
+                  <Text style={[styles.daysNumber, isDelayed && { color: '#D32F2F', fontSize: 36 }]}>{statusNumber}</Text>
+                  <Text style={[styles.daysText, isDelayed && { color: '#D32F2F', fontWeight: 'bold' }]}>{statusText}</Text>
+                </View>
               </View>
             </View>
             <View style={styles.cycleFooter}>
               <Text style={styles.cycleFooterText}>Kỳ tiếp theo dự kiến: <Text style={{fontWeight: '700', color: colors.primaryDark}}>{prediction.predictedStartDate}</Text></Text>
             </View>
+            
+            {isDelayed && (
+              <Pressable style={styles.delayedAlert} onPress={() => router.push('/ai')}>
+                <MaterialCommunityIcons name="robot-excited" size={24} color="white" />
+                <View style={{flex: 1, marginLeft: 10}}>
+                  <Text style={styles.delayedTitle}>Cảnh báo trễ kinh</Text>
+                  <Text style={styles.delayedDesc}>Bạn đã trễ {delayedDays} ngày. Bấm để AI phân tích nguyên nhân nhé!</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="white" />
+              </Pressable>
+            )}
+            
+            {!isDelayed && prediction.ovulationDate && (
+              <View style={styles.ovulationCard}>
+                <View style={styles.ovulationHeader}>
+                  <MaterialCommunityIcons name="egg-outline" size={20} color="#FF9800" />
+                  <Text style={styles.ovulationTitle}>Cửa sổ thụ thai & Rụng trứng</Text>
+                </View>
+                <Text style={styles.ovulationText}>Khoảng thụ thai cao: <Text style={styles.ovulationBold}>{prediction.fertileWindowStart} đến {prediction.fertileWindowEnd}</Text></Text>
+                <Text style={styles.ovulationText}>Ngày rụng trứng (dự kiến): <Text style={styles.ovulationBold}>{prediction.ovulationDate}</Text></Text>
+              </View>
+            )}
           </View>
         ) : (
           <View style={styles.emptyContainer}>
@@ -202,8 +242,18 @@ const styles = StyleSheet.create({
   daysNumber: { fontSize: 56, fontWeight: '800', color: colors.primaryDark, includeFontPadding: false },
   daysText: { fontSize: 15, color: colors.textMuted, fontWeight: '600', marginTop: -5 },
   
-  cycleFooter: { marginTop: 24, backgroundColor: colors.background, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 20 },
-  cycleFooterText: { fontSize: 14, color: colors.textMuted, fontWeight: '500' },
+  cycleFooter: { backgroundColor: colors.background, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  cycleFooterText: { fontSize: 13, color: colors.textMuted },
+  
+  delayedAlert: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F44336', padding: 15, borderRadius: 16, marginTop: 20, width: '100%', boxShadow: '0px 4px 12px rgba(244, 67, 54, 0.3)' },
+  delayedTitle: { color: 'white', fontWeight: '800', fontSize: 15, marginBottom: 2 },
+  delayedDesc: { color: 'white', opacity: 0.9, fontSize: 13, lineHeight: 18 },
+
+  ovulationCard: { backgroundColor: '#FFF8E1', padding: 16, borderRadius: 16, marginTop: 20, width: '100%', borderWidth: 1, borderColor: '#FFE082' },
+  ovulationHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  ovulationTitle: { fontSize: 14, fontWeight: '700', color: '#FF9800', marginLeft: 8 },
+  ovulationText: { fontSize: 13, color: '#5D4037', marginBottom: 4 },
+  ovulationBold: { fontWeight: '700', color: '#E65100' },
 
   emptyContainer: { alignItems: 'center', paddingVertical: 30 },
   emptyText: { color: colors.textMuted, textAlign: 'center', lineHeight: 22, paddingHorizontal: 20 },

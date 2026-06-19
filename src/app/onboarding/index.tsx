@@ -38,10 +38,21 @@ export default function DeepOnboarding() {
   
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<any>({});
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const q = QUESTIONS[currentStep];
 
   const handleNext = async () => {
+    setErrorMsg(null);
+    if (q.id === 'lastPeriodDate' && answers.lastPeriodDate) {
+      const selectedDate = new Date(answers.lastPeriodDate).getTime();
+      const today = new Date().getTime();
+      if (selectedDate > today) {
+        setErrorMsg('Ngày kinh gần nhất không thể nằm ở tương lai!');
+        return;
+      }
+    }
+
     if (currentStep < QUESTIONS.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
@@ -79,6 +90,7 @@ export default function DeepOnboarding() {
   };
 
   const handleSelect = (val: string) => {
+    setErrorMsg(null);
     if (q.multi) {
       const current = answers[q.id] || [];
       if (current.includes(val)) {
@@ -171,6 +183,13 @@ export default function DeepOnboarding() {
         <Text style={styles.stepCounter}>Câu hỏi {currentStep + 1} / {QUESTIONS.length} {q.isRequired && <Text style={{color: '#F44336'}}>*</Text>}</Text>
         <Text style={styles.questionTitle}>{q.title}</Text>
         
+        {errorMsg && (
+          <View style={styles.errorBanner}>
+            <Feather name="alert-circle" size={16} color="#D32F2F" />
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
+        )}
+
         {renderInput()}
 
       </ScrollView>
@@ -212,6 +231,9 @@ const styles = StyleSheet.create({
   optionTextActive: { color: colors.primaryDark, fontWeight: '800' },
   
   input: { backgroundColor: colors.card, padding: 20, borderRadius: 20, fontSize: 18, fontWeight: '600', color: colors.text, boxShadow: '0px 4px 12px rgba(0,0,0,0.04)' },
+
+  errorBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFEBEE', padding: 12, borderRadius: 12, marginBottom: 20 },
+  errorText: { color: '#D32F2F', fontSize: 14, fontWeight: '600', marginLeft: 8 },
 
   footer: { padding: 24, paddingBottom: 40, backgroundColor: colors.background, flexDirection: 'row', gap: 15 },
   skipBtn: { padding: 20, justifyContent: 'center', alignItems: 'center' },

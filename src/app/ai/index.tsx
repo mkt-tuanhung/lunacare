@@ -2,6 +2,8 @@ import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, KeyboardAvoid
 import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useProfileStore } from '../../store/useProfileStore';
+import { chatWithAI } from '../../lib/ai';
 import { useState, useRef } from 'react';
 
 type Message = {
@@ -13,37 +15,39 @@ type Message = {
 
 export default function AIAssistant() {
   const router = useRouter();
+  const profile = useProfileStore(state => state.profile);
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', text: 'Chào bạn, mình là LunaCare AI. Mình có thể giúp gì cho sức khỏe và chu kỳ của bạn hôm nay?', sender: 'ai' }
   ]);
   const [inputText, setInputText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
+  const handleSend = async () => {
+    if (!inputText.trim() || isTyping) return;
 
     const userMsg: Message = { id: Date.now().toString(), text: inputText, sender: 'user' };
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
+    setIsTyping(true);
 
-    // Rule-based mock response
-    setTimeout(() => {
-      let aiMsg: Message = { id: (Date.now() + 1).toString(), text: '', sender: 'ai' };
-      const lowerInput = userMsg.text.toLowerCase();
+    const context = {
+      displayName: profile?.displayName,
+      stressLevel: profile?.healthProfile?.stressLevel,
+      worstSymptoms: profile?.healthProfile?.worstSymptoms
+    };
 
-      if (lowerInput.includes('đau bụng')) {
-        aiMsg.text = 'Nếu đau nhẹ, bạn có thể đi bộ nhẹ, giãn cơ hoặc chườm ấm. Nếu đau dữ dội, ảnh hưởng sinh hoạt, chóng mặt, ra máu rất nhiều hoặc kéo dài bất thường, bạn nên liên hệ bác sĩ.';
-      } else if (lowerInput.includes('chăm sóc')) {
-        aiMsg.text = 'Hiện tại bạn đang ở giai đoạn PMS (Tiền kinh nguyệt). Hãy dành thời gian nghỉ ngơi, uống một cốc sữa ấm trước khi ngủ và nhờ chồng chuẩn bị đồ ăn nhé.';
-      } else if (lowerInput.includes('thuốc') || lowerInput.includes('uống gì')) {
-        aiMsg.text = 'LunaCare không thể chẩn đoán bệnh hay kê đơn thuốc. Nếu bạn cần sử dụng thuốc giảm đau, vui lòng tham khảo ý kiến bác sĩ hoặc dược sĩ chuyên môn nhé.';
-        aiMsg.isAlert = true;
-      } else {
-        aiMsg.text = 'Cảm ơn bạn đã chia sẻ. Mình đã ghi nhận thông tin này. Bạn có muốn mình nhắc nhở uống nước hay nghỉ ngơi thêm không?';
-      }
+    const aiResponse = await chatWithAI(userMsg.text, context);
+    
+    const aiMsg: Message = { 
+      id: (Date.now() + 1).toString(), 
+      text: aiResponse.text, 
+      sender: 'ai',
+      isAlert: aiResponse.isAlert
+    };
 
-      setMessages(prev => [...prev, aiMsg]);
-    }, 1000);
+    setMessages(prev => [...prev, aiMsg]);
+    setIsTyping(false);
   };
 
   return (
@@ -79,6 +83,16 @@ export default function AIAssistant() {
             </View>
           </View>
         ))}
+        {isTyping && (
+          <View style={[styles.messageWrapper, styles.messageWrapperAI]}>
+            <View style={styles.avatarAI}>
+              <MaterialCommunityIcons name="robot-outline" size={20} color="white" />
+            </View>
+            <View style={[styles.messageBubble, styles.bubbleAI]}>
+              <Text style={[styles.messageText, styles.textAI, { fontStyle: 'italic', color: colors.textMuted }]}>AI đang gõ...</Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -91,7 +105,7 @@ export default function AIAssistant() {
             multiline
             maxLength={200}
           />
-          <Pressable style={[styles.sendBtn, !inputText.trim() && { opacity: 0.5 }]} onPress={handleSend} disabled={!inputText.trim()}>
+          <Pressable style={[styles.sendBtn, (!inputText.trim() || isTyping) && { opacity: 0.5 }]} onPress={handleSend} disabled={!inputText.trim() || isTyping}>
             <Feather name="send" size={20} color="white" />
           </Pressable>
         </View>
