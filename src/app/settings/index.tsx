@@ -6,6 +6,7 @@ import { useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { useProfileStore } from '../../store/useProfileStore';
+import { useCycleStore } from '../../store/useCycleStore';
 
 export default function Settings() {
   const router = useRouter();
@@ -14,27 +15,40 @@ export default function Settings() {
 
   const handleDeleteData = async () => {
     const doDelete = async () => {
-      const { profile } = useProfileStore.getState();
-      if (profile?.uid) {
+      const profileStore = useProfileStore.getState();
+      const cycleStore = useCycleStore.getState();
+      
+      if (profileStore.profile?.uid) {
         try {
-          await supabase.from('daily_logs').delete().eq('user_id', profile.uid);
-          await supabase.from('profiles').update({ is_onboarded: false, health_profile: null }).eq('id', profile.uid);
+          await supabase.from('daily_logs').delete().eq('user_id', profileStore.profile.uid);
+          await supabase.from('profiles').update({ is_onboarded: false, health_profile: null }).eq('id', profileStore.profile.uid);
         } catch(e) {
           console.error(e);
         }
       }
-      await AsyncStorage.clear();
-      alert('Đã xóa toàn bộ dữ liệu! Vui lòng khởi động lại ứng dụng để bắt đầu lại từ đầu.');
+
+      // Reset local stores but keep authentication
+      if (profileStore.profile) {
+        profileStore.setProfile({
+          ...profileStore.profile,
+          healthProfile: null,
+          onboardingCompleted: false
+        });
+      }
+      cycleStore.setPeriodEvents([]);
+
+      alert('Đã xóa toàn bộ dữ liệu! Mời bạn khai báo lại thông tin sức khỏe.');
+      router.replace('/onboarding');
     };
 
     if (typeof window !== 'undefined' && window.confirm) {
-      if (window.confirm("Bạn có chắc chắn muốn xóa toàn bộ dữ liệu? Hành động này không thể hoàn tác.")) {
+      if (window.confirm("Bạn có chắc chắn muốn xóa toàn bộ dữ liệu đã nhập? Trạng thái đăng nhập vẫn được giữ nguyên.")) {
         await doDelete();
       }
     } else {
       Alert.alert(
-        "Xóa toàn bộ dữ liệu",
-        "Bạn có chắc chắn muốn xóa toàn bộ dữ liệu? Hành động này không thể hoàn tác.",
+        "Xóa dữ liệu ghi nhận",
+        "Bạn có chắc chắn muốn xóa toàn bộ dữ liệu đã nhập? Trạng thái đăng nhập vẫn được giữ nguyên.",
         [
           { text: "Hủy", style: "cancel" },
           { text: "Xóa", style: "destructive", onPress: doDelete }
