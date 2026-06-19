@@ -1,15 +1,37 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { Stack } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { loadSeedData } from '../data/seedData';
+import { useProfileStore } from '../store/useProfileStore';
+import { View, Text } from 'react-native';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+export default function RootLayout() {
+  const [isReady, setIsReady] = useState(false);
+  const profile = useProfileStore((state) => state.profile);
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  useEffect(() => {
+    // Load giả lập dữ liệu local khi app vừa mở
+    loadSeedData();
+    setIsReady(true);
+  }, []);
+
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading LunaCare...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="onboarding/index" />
+      <Stack.Screen name="home/index" />
+      <Stack.Screen name="calendar/index" />
+      <Stack.Screen name="log/index" />
+      <Stack.Screen name="insights/index" />
+      <Stack.Screen name="care/index" />
+      <Stack.Screen name="partner/index" />
+    </Stack>
   );
 }

@@ -1,56 +1,46 @@
-# Welcome to your Expo app 👋
+# LunaCare - Trợ lý chăm sóc sức khỏe & chu kỳ kinh nguyệt
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Đây là ứng dụng web React Native + Expo + TypeScript dành cho việc theo dõi chu kỳ kinh nguyệt (Period Tracker), đồng thời cung cấp chế độ đồng hành cho người chồng (Husband Companion Mode).
 
-## Get started
+## Tính năng chính (MVP)
+1. **Onboarding**: Thu thập thông tin chu kỳ ban đầu.
+2. **Home Dashboard**: Trạng thái chu kỳ hiện tại, ngày dự kiến kỳ kinh tiếp theo, gọi ý chăm sóc cơ thể.
+3. **Calendar**: Giao diện lịch hiển thị các giai đoạn rụng trứng, chu kỳ kinh nguyệt và PMS.
+4. **Log Today**: Ghi nhận triệu chứng, tâm trạng, lượng máu, mức độ đau, lượng nước uống.
+5. **Insights**: Tổng quan phân tích dữ liệu các chu kỳ trước đó.
+6. **Care Center**: Trung tâm gợi ý chăm sóc cho bản thân (dành cho vợ).
+7. **Partner Mode**: Hệ thống chia sẻ quyền truy cập thông tin với người chồng.
+8. **Husband Companion**: Giao diện nhắc việc và gợi ý hành động chăm sóc vợ dành cho chồng.
 
-1. Install dependencies
+## Hướng dẫn cài đặt & chạy dự án
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### 1. Cài đặt các thư viện phụ thuộc
+Vì dự án cần `zustand` cho quản lý state và `recharts` cho biểu đồ trên web, hãy đảm bảo bạn cài đặt các gói mới:
 
 ```bash
-npm run reset-project
+cd "/Users/mac/Downloads/du an mo_embeiu/lunacare"
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Khởi chạy ứng dụng trên Web
+Ứng dụng được thiết kế ưu tiên cho Web-first:
 
-### Other setup steps
+```bash
+npm run web
+```
+Sau đó, hãy mở URL (thường là `http://localhost:8081`) trên trình duyệt để trải nghiệm ứng dụng.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Cấu trúc thư mục
 
-## Learn more
+- `src/app`: Chứa các màn hình (screens) được định tuyến bởi Expo Router.
+- `src/components`: Các UI Component tái sử dụng.
+- `src/features`: Các module chức năng (cycle, symptoms, care, partner, v.v.).
+- `src/data`: Mock data, Local DB repositories.
+- `src/store`: Zustand stores.
+- `src/theme`: Theme variables (colors, fonts).
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Kế hoạch phát triển (Roadmap)
+- Thay thế Mock Data bằng Supabase & Cloudflare R2 để đồng bộ dữ liệu.
+- Phát triển API AI thực tế cho chức năng AI Chat.
+- Bổ sung hệ thống Notification cục bộ.
+- Triển khai thuật toán mã hóa End-to-End Encryption cho dữ liệu nhạy cảm.
