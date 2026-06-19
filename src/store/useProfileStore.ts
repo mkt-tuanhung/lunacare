@@ -1,26 +1,79 @@
 import { create } from 'zustand';
+import { supabase } from '../lib/supabase';
 
-export interface Profile {
-  id: string;
-  userId: string;
-  displayName: string;
-  cycleGoal: string;
-  averageCycleLength: number;
-  averagePeriodLength: number;
-  privacyModeEnabled: boolean;
-  isOnboarded: boolean;
+export interface HealthProfile {
+  // Nhóm 1: Dữ liệu kinh nguyệt
+  goal: string;
+  lastPeriodDate: string | null;
+  periodDuration: number;
+  cycleLength: number;
+  cycleRegularity: string;
+  
+  // Nhóm 2: Tiền sử Y tế
+  birthControl: string;
+  medicalConditions: string[];
+  flowLevel: string;
+  crampsSeverity: string;
+  pmsSeverity: string;
+  
+  // Nhóm 3: Thói quen & Môi trường
+  sleepHours: string;
+  sleepQuality: string;
+  stressLevel: string;
+  activityLevel: string;
+  diet: string;
+  
+  // Nhóm 4: Cá nhân hóa
+  comfortItems: string[];
+  worstSymptoms: string[];
+  emotionalSymptoms: string[];
+  partnerRequests: string;
 }
 
 interface ProfileState {
-  profile: Profile | null;
-  setProfile: (profile: Profile) => void;
-  updateProfile: (updates: Partial<Profile>) => void;
+  profile: {
+    displayName: string;
+    onboardingCompleted: boolean;
+    healthProfile: HealthProfile | null;
+  } | null;
+  setProfile: (profile: any) => void;
+  updateHealthProfile: (data: Partial<HealthProfile>) => void;
+  saveProfileToSupabase: () => Promise<void>;
 }
 
-export const useProfileStore = create<ProfileState>((set) => ({
+export const useProfileStore = create<ProfileState>((set, get) => ({
   profile: null,
   setProfile: (profile) => set({ profile }),
-  updateProfile: (updates) => set((state) => ({ 
-    profile: state.profile ? { ...state.profile, ...updates } : null 
-  }))
+  updateHealthProfile: (data) => set((state) => {
+    if (!state.profile) return state;
+    return {
+      profile: {
+        ...state.profile,
+        healthProfile: {
+          ...(state.profile.healthProfile as HealthProfile),
+          ...data
+        }
+      }
+    };
+  }),
+  saveProfileToSupabase: async () => {
+    const { profile } = get();
+    if (!profile) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert([
+          { 
+            display_name: profile.displayName,
+            health_profile: profile.healthProfile
+          }
+        ]);
+        
+      if (error) throw error;
+      console.log("✅ Đã lưu Health Profile lên Supabase thành công!");
+    } catch (error) {
+      console.error("Lỗi khi lưu lên Supabase:", error);
+    }
+  }
 }));

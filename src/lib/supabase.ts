@@ -1,4 +1,3 @@
-import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 
 // Thay thế bằng Project URL của bạn
