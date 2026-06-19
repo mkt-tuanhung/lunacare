@@ -173,13 +173,6 @@ export default function Home() {
           <Text style={styles.gridText}>Phân tích</Text>
         </Pressable>
 
-        <Pressable style={({pressed}) => [styles.gridItem, pressed && styles.pressed]} onPress={() => router.push('/care')}>
-          <View style={[styles.iconWrapper, { backgroundColor: '#FFF0F5' }]}>
-            <MaterialCommunityIcons name="flower-tulip-outline" size={26} color={colors.primary} />
-          </View>
-          <Text style={styles.gridText}>Chăm sóc</Text>
-        </Pressable>
-
         <Pressable style={({pressed}) => [styles.gridItem, pressed && styles.pressed]} onPress={() => router.push('/history')}>
           <View style={[styles.iconWrapper, { backgroundColor: '#FFF5E6' }]}>
             <Feather name="clock" size={24} color="#FF9F43" />
@@ -199,6 +192,13 @@ export default function Home() {
             <Feather name="settings" size={24} color="#6B7280" />
           </View>
           <Text style={styles.gridText}>Cài đặt</Text>
+        </Pressable>
+
+        <Pressable style={({pressed}) => [styles.gridItem, pressed && styles.pressed]} onPress={() => alert('Tính năng Cẩm Nang Kiến Thức đang được phát triển!')}>
+          <View style={[styles.iconWrapper, { backgroundColor: '#E8F5E9' }]}>
+            <Feather name="book-open" size={24} color="#4CAF50" />
+          </View>
+          <Text style={styles.gridText}>Kiến thức</Text>
         </Pressable>
       </View>
     </ScrollView>
