@@ -10,18 +10,25 @@ export default function Settings() {
   const [isPinEnabled, setIsPinEnabled] = useState(false);
   const [hideNotifications, setHideNotifications] = useState(true);
 
-  const handleDeleteData = () => {
-    Alert.alert(
-      "Xóa toàn bộ dữ liệu",
-      "Bạn có chắc chắn muốn xóa toàn bộ dữ liệu? Hành động này không thể hoàn tác.",
-      [
-        { text: "Hủy", style: "cancel" },
-        { text: "Xóa", style: "destructive", onPress: async () => {
-          await AsyncStorage.clear();
-          alert('Đã xóa toàn bộ dữ liệu! Vui lòng tải lại trang (F5) để bắt đầu lại từ đầu.');
-        } }
-      ]
-    );
+  const handleDeleteData = async () => {
+    if (typeof window !== 'undefined' && window.confirm) {
+      if (window.confirm("Bạn có chắc chắn muốn xóa toàn bộ dữ liệu? Hành động này không thể hoàn tác.")) {
+        await AsyncStorage.clear();
+        alert('Đã xóa toàn bộ dữ liệu! Vui lòng tải lại trang (F5) để bắt đầu lại từ đầu.');
+      }
+    } else {
+      Alert.alert(
+        "Xóa toàn bộ dữ liệu",
+        "Bạn có chắc chắn muốn xóa toàn bộ dữ liệu? Hành động này không thể hoàn tác.",
+        [
+          { text: "Hủy", style: "cancel" },
+          { text: "Xóa", style: "destructive", onPress: async () => {
+            await AsyncStorage.clear();
+            alert('Đã xóa toàn bộ dữ liệu! Vui lòng tải lại trang (F5) để bắt đầu lại từ đầu.');
+          } }
+        ]
+      );
+    }
   };
 
   return (
