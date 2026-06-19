@@ -165,14 +165,25 @@ function weightedAverage(values: number[]): number {
   return Math.round(weightedSum / totalWeight);
 }
 
-export function predictCycle(cycles: Cycle[]): CyclePrediction {
+export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePrediction {
   const sorted = [...cycles].sort(
     (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
   );
 
   // Lấy health profile để điều chỉnh thuật toán
   const profileState = useProfileStore.getState();
-  const healthProfile = profileState.profile?.healthProfile;
+  const healthProfile = profileState.profile?.healthProfile ? { ...profileState.profile.healthProfile } : null;
+
+  // [UPDATE] Làm cho Thuật toán Offline thông minh hơn bằng cách đọc Nhật ký Ghi nhận (Giống AI)
+  if (healthProfile && recentLogs.length > 0) {
+    const latestLog = recentLogs[0];
+    // Nếu hôm nay ghi nhận Vui vẻ / Bình thường -> Hủy bỏ cảnh báo Stress Rất cao từ Hồ sơ gốc
+    if (latestLog.moods && (latestLog.moods.includes('Vui vẻ') || latestLog.moods.includes('Bình thường') || latestLog.moods.includes('Bình tĩnh'))) {
+      if (healthProfile.stressLevel === 'Rất cao' || healthProfile.stressLevel === 'Hơi căng thẳng') {
+        healthProfile.stressLevel = 'Thấp';
+      }
+    }
+  }
 
   if (!sorted.length) {
     // NẾU CHƯA CÓ LỊCH SỬ NÀO -> Dự đoán hoàn toàn dựa trên dữ liệu nhập lúc Onboarding

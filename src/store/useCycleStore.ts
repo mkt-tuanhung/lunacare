@@ -69,8 +69,16 @@ export const useCycleStore = create<CycleState>()(
       
       let finalPrediction = aiPrediction;
       if (!finalPrediction) {
+        // Tải nhật ký gần nhất để cho Thuật toán Offline tham khảo
+        let recentLogs: any[] = [];
+        const { supabase } = require('../lib/supabase');
+        const profileStore = useProfileStore.getState();
+        if (profileStore.profile?.uid) {
+          const { data } = await supabase.from('daily_logs').select('*').eq('user_id', profileStore.profile.uid).order('log_date', { ascending: false }).limit(1);
+          if (data) recentLogs = data;
+        }
         // Fallback thuật toán cũ nếu AI lỗi
-        finalPrediction = predictCycle(cycles);
+        finalPrediction = predictCycle(cycles, recentLogs);
       }
       
       set({ prediction: finalPrediction, isPredicting: false });
@@ -84,7 +92,16 @@ export const useCycleStore = create<CycleState>()(
       console.error(error);
       const { periodEvents } = get();
       const cycles = periodEvents.map(e => ({ startDate: e.startDate, endDate: e.endDate }));
-      set({ prediction: predictCycle(cycles), isPredicting: false });
+      
+      let recentLogs: any[] = [];
+      const { supabase } = require('../lib/supabase');
+      const profileStore = useProfileStore.getState();
+      if (profileStore.profile?.uid) {
+        const { data } = await supabase.from('daily_logs').select('*').eq('user_id', profileStore.profile.uid).order('log_date', { ascending: false }).limit(1);
+        if (data) recentLogs = data;
+      }
+      
+      set({ prediction: predictCycle(cycles, recentLogs), isPredicting: false });
     }
   },
 
