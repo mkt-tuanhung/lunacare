@@ -2,15 +2,16 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PeriodEvent, CyclePrediction } from '../features/cycle/cycle.types';
-import { predictCycle } from '../features/cycle/cycle.engine';
+import { predictCycle, predictCycleWithAI } from '../features/cycle/cycle.engine';
 
 interface CycleState {
   periodEvents: PeriodEvent[];
   prediction: CyclePrediction | null;
+  isPredicting: boolean;
   addPeriodEvent: (event: Omit<PeriodEvent, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updatePeriodEvent: (id: string, updates: Partial<PeriodEvent>) => void;
   deletePeriodEvent: (id: string) => void;
-  calculatePrediction: () => void;
+  calculatePrediction: () => Promise<void>;
   setPeriodEvents: (events: PeriodEvent[]) => void;
 }
 
@@ -19,6 +20,7 @@ export const useCycleStore = create<CycleState>()(
     (set, get) => ({
   periodEvents: [],
   prediction: null,
+  isPredicting: false,
   
   addPeriodEvent: (eventData) => {
     const newEvent: PeriodEvent = {
@@ -52,15 +54,31 @@ export const useCycleStore = create<CycleState>()(
     get().calculatePrediction();
   },
 
-  calculatePrediction: () => {
-    const { periodEvents } = get();
-    // Chuyển PeriodEvent thành định dạng Cycle cho engine
-    const cycles = periodEvents.map(e => ({
-      startDate: e.startDate,
-      endDate: e.endDate,
-    }));
-    const prediction = predictCycle(cycles);
-    set({ prediction });
+  calculatePrediction: async () => {
+    set({ isPredicting: true });
+    try {
+      const { periodEvents } = get();
+      const cycles = periodEvents.map(e => ({
+        startDate: e.startDate,
+        endDate: e.endDate,
+      }));
+      
+      // Gọi AI suy luận
+      const aiPrediction = await predictCycleWithAI(cycles);
+      
+      if (aiPrediction) {
+        set({ prediction: aiPrediction, isPredicting: false });
+      } else {
+        // Fallback thuật toán cũ nếu AI lỗi
+        const prediction = predictCycle(cycles);
+        set({ prediction, isPredicting: false });
+      }
+    } catch (error) {
+      console.error(error);
+      const { periodEvents } = get();
+      const cycles = periodEvents.map(e => ({ startDate: e.startDate, endDate: e.endDate }));
+      set({ prediction: predictCycle(cycles), isPredicting: false });
+    }
   },
 
   setPeriodEvents: (events) => {

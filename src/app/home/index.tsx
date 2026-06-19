@@ -8,7 +8,7 @@ import { Feather, Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/v
 const { width } = Dimensions.get('window');
 
 export default function Home() {
-  const prediction = useCycleStore((state) => state.prediction);
+  const { prediction, isPredicting } = useCycleStore();
   const profile = useProfileStore((state) => state.profile);
   const router = useRouter();
 
@@ -72,7 +72,12 @@ export default function Home() {
           </Pressable>
         </View>
 
-        {prediction ? (
+        {isPredicting ? (
+          <View style={styles.emptyContainer}>
+            <MaterialCommunityIcons name="robot-outline" size={40} color={colors.primary} style={{marginBottom: 15}} />
+            <Text style={styles.emptyText}>AI đang phân tích dữ liệu và tính toán ngày kinh cho bạn...</Text>
+          </View>
+        ) : prediction ? (
           <View style={styles.circleContainer}>
             <View style={[styles.largeCircle, isDelayed && { borderColor: '#F44336' }]}>
               <View style={[styles.innerCircle, isDelayed && { backgroundColor: '#FFEBEE' }]}>

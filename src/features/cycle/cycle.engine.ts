@@ -1,6 +1,82 @@
 import { Cycle, CyclePrediction } from './cycle.types';
 import { useProfileStore } from '../../store/useProfileStore';
 
+export async function predictCycleWithAI(cycles: Cycle[]): Promise<CyclePrediction | null> {
+  const profileState = useProfileStore.getState();
+  const healthProfile = profileState.profile?.healthProfile;
+  
+  if (!healthProfile) return null;
+
+  const historyStr = cycles.length > 0 
+    ? cycles.map(c => `Bắt đầu: ${c.startDate}, Kết thúc: ${c.endDate || 'Chưa rõ'}`).join(' | ')
+    : `Chưa có lịch sử. Thông tin tham khảo: Kinh gần nhất ${healthProfile.lastPeriodDate}, chu kỳ ${healthProfile.cycleLength} ngày, kéo dài ${healthProfile.periodDuration} ngày.`;
+
+  const systemPrompt = `
+Bạn là một AI phân tích chu kỳ kinh nguyệt thông minh.
+Dưới đây là lịch sử chu kỳ và thông tin sức khỏe của người dùng:
+- Lịch sử: ${historyStr}
+- Goal: ${healthProfile.goal}
+- Stress: ${healthProfile.stressLevel}
+- Ngủ: ${healthProfile.sleepHours} (${healthProfile.sleepQuality})
+- Tránh thai: ${healthProfile.birthControl}
+- Bệnh lý: ${healthProfile.medicalConditions?.join(', ')}
+
+Hãy phân tích và tính toán chính xác chu kỳ tiếp theo. Trả lời CHỈ BẰNG 1 CHUỖI JSON HỢP LỆ (KHÔNG chứa markdown code block, KHÔNG có text thừa), với cấu trúc sau:
+{
+  "predictedStartDate": "YYYY-MM-DD",
+  "predictedEndDate": "YYYY-MM-DD",
+  "predictedCycleLength": number,
+  "predictedPeriodLength": number,
+  "ovulationDate": "YYYY-MM-DD",
+  "fertileWindowStart": "YYYY-MM-DD",
+  "fertileWindowEnd": "YYYY-MM-DD",
+  "pmsWindowStart": "YYYY-MM-DD",
+  "pmsWindowEnd": "YYYY-MM-DD",
+  "confidence": "high" | "medium" | "low",
+  "confidenceScore": number,
+  "notes": ["lời giải thích ngắn gọn tại sao dự đoán như vậy"]
+}
+Lưu ý quan trọng: Ngày rụng trứng = predictedStartDate trừ 14 ngày. Khoảng thụ thai = rụng trứng - 5 ngày đến + 1 ngày.
+Hôm nay là: ${new Date().toISOString().split('T')[0]}. Hãy đảm bảo kết quả tính toán hợp lý với thời gian hiện tại và loại bỏ các lỗi outlier (ví dụ ngắt quãng 86 ngày) bằng cách giả định người dùng quên log hoặc tính dựa vào ngày log mới nhất.
+`;
+
+  try {
+    const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+    let textResult = "";
+
+    if (API_KEY) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
+            generationConfig: { temperature: 0.2, response_mime_type: "application/json" }
+          })
+        }
+      );
+      const data = await response.json();
+      textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    } else {
+      const prompt = systemPrompt;
+      const response = await fetch('https://text.pollinations.ai/prompt/' + encodeURIComponent(prompt), { method: 'GET' });
+      textResult = await response.text();
+    }
+
+    if (!textResult) return null;
+
+    // Loại bỏ markdown (nếu có)
+    const cleanJson = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
+    const prediction: CyclePrediction = JSON.parse(cleanJson);
+    return prediction;
+
+  } catch (err) {
+    console.error("AI Prediction Error:", err);
+    return null;
+  }
+}
+
 const DAY_MS = 1000 * 60 * 60 * 24;
 
 export function daysBetween(a: string, b: string): number {
