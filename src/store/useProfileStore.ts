@@ -32,6 +32,7 @@ export interface HealthProfile {
 
 interface ProfileState {
   profile: {
+    uid?: string;
     displayName: string;
     onboardingCompleted: boolean;
     healthProfile: HealthProfile | null;
@@ -58,20 +59,20 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   }),
   saveProfileToSupabase: async () => {
     const { profile } = get();
-    if (!profile) return;
+    if (!profile || !profile.uid) return;
     
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .insert([
-          { 
-            display_name: profile.displayName,
-            health_profile: profile.healthProfile
-          }
-        ]);
+        .update({ 
+          display_name: profile.displayName,
+          health_profile: profile.healthProfile,
+          is_onboarded: true
+        })
+        .eq('uid', profile.uid);
         
       if (error) throw error;
-      console.log("✅ Đã lưu Health Profile lên Supabase thành công!");
+      console.log("✅ Đã cập nhật Health Profile lên Supabase thành công!");
     } catch (error) {
       console.error("Lỗi khi lưu lên Supabase:", error);
     }
