@@ -110,12 +110,12 @@ Trả lời CHỈ BẰNG 1 CHUỖI JSON HỢP LỆ (KHÔNG chứa markdown code 
     const prediction: CyclePrediction = JSON.parse(cleanJson);
     
     // VALIDATE KẾT QUẢ CỦA AI NẾU NÓ QUÁ VÔ LÝ
-    if (prediction.predictedCycleLength > 55 || prediction.predictedCycleLength < 20) {
+    if ((prediction.predictedCycleLength ?? 0) > 55 || (prediction.predictedCycleLength ?? 0) < 20) {
        prediction.predictedCycleLength = healthProfile.cycleLength || 28;
     }
     const today = new Date();
     today.setHours(0,0,0,0);
-    const predictedStart = new Date(prediction.predictedStartDate);
+    const predictedStart = new Date(prediction.predictedStartDate || today);
     predictedStart.setHours(0,0,0,0);
     const DAY_MS = 1000 * 60 * 60 * 24;
     const diffDays = (predictedStart.getTime() - today.getTime()) / DAY_MS;
