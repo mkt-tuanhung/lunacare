@@ -1,87 +1,85 @@
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useCycleStore } from '../../store/useCycleStore';
 import { colors } from '../../theme/colors';
-import { Platform } from 'react-native';
-
-// Chỉ render Recharts trên môi trường web để tránh lỗi crash trên mobile
-let LineChart: any, Line: any, XAxis: any, YAxis: any, CartesianGrid: any, Tooltip: any, ResponsiveContainer: any;
-if (Platform.OS === 'web') {
-  const Recharts = require('recharts');
-  LineChart = Recharts.LineChart;
-  Line = Recharts.Line;
-  XAxis = Recharts.XAxis;
-  YAxis = Recharts.YAxis;
-  CartesianGrid = Recharts.CartesianGrid;
-  Tooltip = Recharts.Tooltip;
-  ResponsiveContainer = Recharts.ResponsiveContainer;
-}
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useCycleStore } from '../../store/useCycleStore';
 
 export default function Insights() {
   const router = useRouter();
-  const periodEvents = useCycleStore((state) => state.periodEvents);
-
-  // Tạo data giả lập cho biểu đồ nếu events ít hơn 3
-  const chartData = periodEvents.length >= 2 ? periodEvents.map((e, index) => {
-    // Tính độ dài chu kỳ (đơn giản hóa)
-    const length = 28 + Math.floor(Math.random() * 4) - 2;
-    return { name: `Tháng ${index + 1}`, length };
-  }) : [
-    { name: 'Tháng 1', length: 28 },
-    { name: 'Tháng 2', length: 29 },
-    { name: 'Tháng 3', length: 27 },
-    { name: 'Tháng 4', length: 30 },
-    { name: 'Tháng 5', length: 28 },
-  ];
-
-  const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/home');
-    }
-  };
+  const { prediction } = useCycleStore();
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Feather name="arrow-left" size={28} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Phân tích chu kỳ</Text>
-        <View style={{width: 40}} />
+        <Text style={styles.headerTitle}>Phân Tích Xu Hướng</Text>
+        <View style={styles.backBtn} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Độ dài chu kỳ trung bình</Text>
-          <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
-            <Text style={styles.summaryValue}>28</Text>
-            <Text style={styles.summaryUnit}> ngày</Text>
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <View style={[styles.iconBox, { backgroundColor: '#FFF0F3' }]}>
+              <Feather name="refresh-cw" size={20} color={colors.primary} />
+            </View>
+            <Text style={styles.statValue}>{prediction?.predictedCycleLength || 28} <Text style={styles.statUnit}>ngày</Text></Text>
+            <Text style={styles.statLabel}>Chu kỳ trung bình</Text>
           </View>
-          <Text style={styles.summaryDesc}>Chu kỳ của bạn rất đều đặn (Dao động ±1 ngày). Tuyệt vời!</Text>
+          
+          <View style={styles.statCard}>
+            <View style={[styles.iconBox, { backgroundColor: '#E3F2FD' }]}>
+              <Feather name="droplet" size={20} color="#2196F3" />
+            </View>
+            <Text style={styles.statValue}>{prediction?.predictedPeriodLength || 5} <Text style={styles.statUnit}>ngày</Text></Text>
+            <Text style={styles.statLabel}>Hành kinh trung bình</Text>
+          </View>
         </View>
 
-        <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Biểu đồ độ dài chu kỳ</Text>
-          <View style={styles.chartContainer}>
-            {Platform.OS === 'web' && ResponsiveContainer ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={colors.border} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: colors.textMuted, fontSize: 12}} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: colors.textMuted, fontSize: 12}} domain={['dataMin - 2', 'dataMax + 2']} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: 10, borderWidth: 0, boxShadow: '0px 4px 10px rgba(0,0,0,0.1)' }}
-                    itemStyle={{ color: colors.primary, fontWeight: 'bold' }}
-                  />
-                  <Line type="monotone" dataKey="length" stroke={colors.primary} strokeWidth={4} dot={{r: 6, fill: colors.primary, strokeWidth: 2, stroke: '#fff'}} activeDot={{r: 8}} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <Text style={styles.fallbackText}>Biểu đồ Recharts chỉ hỗ trợ trên nền tảng Web.</Text>
-            )}
+        <Text style={styles.sectionTitle}>Độ tin cậy dự đoán</Text>
+        <View style={styles.confidenceCard}>
+          <View style={styles.confidenceHeader}>
+            <MaterialCommunityIcons name="shield-check" size={28} color="#4CAF50" />
+            <Text style={styles.confidenceTitle}>Mức độ: {prediction?.confidence === 'high' ? 'Cao' : prediction?.confidence === 'medium' ? 'Trung bình' : 'Thấp'}</Text>
+          </View>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${prediction?.confidenceScore || 35}%`, backgroundColor: '#4CAF50' }]} />
+          </View>
+          {prediction?.notes.map((note, idx) => (
+            <Text key={idx} style={styles.confidenceNote}>• {note}</Text>
+          ))}
+        </View>
+
+        <Text style={styles.sectionTitle}>Triệu chứng thường gặp</Text>
+        <View style={styles.symptomsCard}>
+          <View style={styles.symptomRow}>
+            <Text style={styles.symptomName}>Đau bụng kinh</Text>
+            <View style={styles.barBg}><View style={[styles.barFill, { width: '80%', backgroundColor: colors.primary }]} /></View>
+            <Text style={styles.symptomFreq}>80%</Text>
+          </View>
+          <View style={styles.symptomRow}>
+            <Text style={styles.symptomName}>Đau lưng</Text>
+            <View style={styles.barBg}><View style={[styles.barFill, { width: '60%', backgroundColor: '#FF9800' }]} /></View>
+            <Text style={styles.symptomFreq}>60%</Text>
+          </View>
+          <View style={styles.symptomRow}>
+            <Text style={styles.symptomName}>Mất ngủ</Text>
+            <View style={styles.barBg}><View style={[styles.barFill, { width: '30%', backgroundColor: '#9C27B0' }]} /></View>
+            <Text style={styles.symptomFreq}>30%</Text>
+          </View>
+        </View>
+
+        <Text style={styles.sectionTitle}>Xu hướng Tâm trạng</Text>
+        <View style={styles.moodCard}>
+          <View style={styles.moodItem}>
+            <Feather name="frown" size={24} color="#9C27B0" />
+            <Text style={styles.moodText}>Dễ cáu gắt vào 3 ngày trước kỳ</Text>
+          </View>
+          <View style={styles.moodItem}>
+            <Feather name="battery-charging" size={24} color="#F44336" />
+            <Text style={styles.moodText}>Năng lượng thấp vào ngày 1-2</Text>
           </View>
         </View>
 
@@ -92,21 +90,35 @@ export default function Insights() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 40, backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border },
-  backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 20, backgroundColor: colors.background },
-  backIcon: { fontSize: 20, color: colors.text, fontWeight: 'bold' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: colors.background },
+  backBtn: { width: 44, height: 44, justifyContent: 'center' },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
+  scrollContent: { padding: 24, paddingBottom: 60 },
+
+  statsGrid: { flexDirection: 'row', gap: 15, marginBottom: 30 },
+  statCard: { flex: 1, backgroundColor: colors.card, padding: 20, borderRadius: 24, boxShadow: '0px 4px 12px rgba(0,0,0,0.03)' },
+  iconBox: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
+  statValue: { fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: 4 },
+  statUnit: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
+  statLabel: { fontSize: 13, color: colors.textMuted },
+
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 15 },
   
-  scrollContent: { padding: 20 },
-  
-  summaryCard: { backgroundColor: colors.primary, borderRadius: 24, padding: 25, marginBottom: 20, boxShadow: '0px 8px 20px rgba(255, 107, 139, 0.4)' },
-  summaryTitle: { color: 'rgba(255,255,255,0.9)', fontSize: 14, fontWeight: '600', marginBottom: 5 },
-  summaryValue: { color: 'white', fontSize: 48, fontWeight: 'bold' },
-  summaryUnit: { color: 'rgba(255,255,255,0.8)', fontSize: 18, fontWeight: '600' },
-  summaryDesc: { color: 'rgba(255,255,255,0.95)', fontSize: 14, marginTop: 15, lineHeight: 20 },
-  
-  chartCard: { backgroundColor: colors.card, borderRadius: 24, padding: 20, boxShadow: '0px 5px 15px rgba(0,0,0,0.05)' },
-  chartTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 20 },
-  chartContainer: { height: 250, width: '100%', justifyContent: 'center', alignItems: 'center' },
-  fallbackText: { color: colors.textMuted, fontStyle: 'italic' }
+  confidenceCard: { backgroundColor: colors.card, padding: 20, borderRadius: 24, marginBottom: 30, boxShadow: '0px 4px 12px rgba(0,0,0,0.03)' },
+  confidenceHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  confidenceTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginLeft: 10 },
+  progressBar: { height: 8, backgroundColor: '#E0E0E0', borderRadius: 4, marginBottom: 15 },
+  progressFill: { height: '100%', borderRadius: 4 },
+  confidenceNote: { fontSize: 14, color: colors.textMuted, lineHeight: 22, marginBottom: 5 },
+
+  symptomsCard: { backgroundColor: colors.card, padding: 20, borderRadius: 24, marginBottom: 30, boxShadow: '0px 4px 12px rgba(0,0,0,0.03)' },
+  symptomRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  symptomName: { width: 100, fontSize: 14, fontWeight: '600', color: colors.text },
+  barBg: { flex: 1, height: 8, backgroundColor: '#F0F0F0', borderRadius: 4, marginHorizontal: 10 },
+  barFill: { height: '100%', borderRadius: 4 },
+  symptomFreq: { width: 35, fontSize: 13, fontWeight: '700', color: colors.textMuted, textAlign: 'right' },
+
+  moodCard: { backgroundColor: colors.card, padding: 20, borderRadius: 24, marginBottom: 30, boxShadow: '0px 4px 12px rgba(0,0,0,0.03)' },
+  moodItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  moodText: { fontSize: 15, fontWeight: '500', color: colors.text, marginLeft: 12 }
 });

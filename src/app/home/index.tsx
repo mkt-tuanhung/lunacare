@@ -3,7 +3,7 @@ import { useCycleStore } from '../../store/useCycleStore';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
-import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -82,7 +82,35 @@ export default function Home() {
         <Text style={styles.primaryButtonText}>Ghi nhận hôm nay</Text>
       </Pressable>
 
-      <Text style={styles.sectionTitle}>Khám phá</Text>
+      <Text style={styles.sectionTitle}>Chăm Sóc & Đồng Hành</Text>
+      <View style={styles.quickActions}>
+        <Pressable style={styles.actionBtn} onPress={() => router.push('/care')}>
+          <View style={[styles.actionIcon, { backgroundColor: '#E8F5E9' }]}>
+            <Feather name="heart" size={24} color="#4CAF50" />
+          </View>
+          <Text style={styles.actionText}>Tự Chăm Sóc</Text>
+        </Pressable>
+        <Pressable style={styles.actionBtn} onPress={() => router.push('/partner')}>
+          <View style={[styles.actionIcon, { backgroundColor: '#FFF3E0' }]}>
+            <MaterialCommunityIcons name="shield-account-outline" size={24} color="#FF9800" />
+          </View>
+          <Text style={styles.actionText}>Cấp Quyền</Text>
+        </Pressable>
+        <Pressable style={styles.actionBtn} onPress={() => router.push('/husband')}>
+          <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
+            <FontAwesome5 name="user-tie" size={20} color="#2196F3" />
+          </View>
+          <Text style={styles.actionText}>Góc Cho Chồng</Text>
+        </Pressable>
+        <Pressable style={styles.actionBtn} onPress={() => router.push('/ai')}>
+          <View style={[styles.actionIcon, { backgroundColor: '#F3E5F5' }]}>
+            <MaterialCommunityIcons name="robot-outline" size={24} color="#9C27B0" />
+          </View>
+          <Text style={styles.actionText}>Trợ lý AI</Text>
+        </Pressable>
+      </View>
+
+      <Text style={styles.sectionTitle}>Tương tác Nhanh</Text>
       
       {/* Features Grid */}
       <View style={styles.grid}>
@@ -150,6 +178,11 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   cardTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
   iconButton: { padding: 8, backgroundColor: colors.background, borderRadius: 20 },
+
+  quickActions: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30, flexWrap: 'wrap' },
+  actionBtn: { alignItems: 'center', width: '23%' },
+  actionIcon: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  actionText: { fontSize: 12, fontWeight: '600', color: colors.text, textAlign: 'center' },
   
   circleContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
   largeCircle: {

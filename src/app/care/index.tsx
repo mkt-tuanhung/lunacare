@@ -1,68 +1,108 @@
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useCareStore, SupportLevel } from '../../store/useCareStore';
+import { useCycleStore } from '../../store/useCycleStore';
+
+const SUPPORT_LEVELS: { id: SupportLevel; title: string; color: string; desc: string; icon: any }[] = [
+  { id: 'green', title: 'Mức Xanh', color: '#4CAF50', desc: 'Em ổn, chăm sóc bình thường', icon: 'leaf' },
+  { id: 'yellow', title: 'Mức Vàng', color: '#FFC107', desc: 'Em hơi mệt, cần nhẹ nhàng', icon: 'weather-partly-cloudy' },
+  { id: 'orange', title: 'Mức Cam', color: '#FF9800', desc: 'Em đau/khó chịu, cần hỗ trợ nhiều', icon: 'fire' },
+  { id: 'red', title: 'Mức Đỏ', color: '#F44336', desc: 'Em rất đau, cần theo dõi sát', icon: 'alert-circle' },
+];
 
 export default function CareCenter() {
   const router = useRouter();
-
-  const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/home');
-    }
-  };
+  const { currentSupportLevel, setSupportLevel, preferences } = useCareStore();
+  const { prediction } = useCycleStore();
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={handleBack} style={styles.backButton}>
-          <Feather name="chevron-left" size={28} color={colors.text} />
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Feather name="arrow-left" size={28} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Chăm sóc bản thân</Text>
-        <View style={{width: 40}} />
+        <Text style={styles.headerTitle}>Trung Tâm Chăm Sóc</Text>
+        <View style={styles.backBtn} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        <View style={styles.welcomeCard}>
-          <MaterialCommunityIcons name="flower-tulip" size={40} color={colors.primary} style={{marginBottom: 10}} />
-          <Text style={styles.welcomeTitle}>Hãy ưu tiên bản thân nhé!</Text>
-          <Text style={styles.welcomeText}>Dựa vào chu kỳ hiện tại, năng lượng của bạn có thể đang ở mức thấp. Hãy dành thời gian nghỉ ngơi nhiều hơn.</Text>
+        <Text style={styles.sectionTitle}>Mức độ cần hỗ trợ hôm nay</Text>
+        <Text style={styles.sectionDesc}>Hãy cho chồng biết hôm nay cơ thể bạn đang cảm thấy thế nào để nhận được sự chăm sóc phù hợp nhất nhé.</Text>
+
+        <View style={styles.levelContainer}>
+          {SUPPORT_LEVELS.map(level => {
+            const isSelected = currentSupportLevel === level.id;
+            return (
+              <Pressable
+                key={level.id}
+                style={[
+                  styles.levelCard,
+                  isSelected && { borderColor: level.color, backgroundColor: level.color + '15' }
+                ]}
+                onPress={() => setSupportLevel(level.id)}
+              >
+                <View style={[styles.iconBox, { backgroundColor: level.color }]}>
+                  <MaterialCommunityIcons name={level.icon} size={24} color="white" />
+                </View>
+                <View style={styles.levelInfo}>
+                  <Text style={[styles.levelTitle, { color: isSelected ? level.color : colors.text }]}>{level.title}</Text>
+                  <Text style={styles.levelDesc}>{level.desc}</Text>
+                </View>
+                {isSelected && (
+                  <Feather name="check-circle" size={24} color={level.color} />
+                )}
+              </Pressable>
+            );
+          })}
         </View>
 
-        <Text style={styles.sectionTitle}>Gợi ý cho hôm nay</Text>
-
+        <Text style={styles.sectionTitle}>Gợi ý Chăm sóc bản thân</Text>
         <View style={styles.suggestionCard}>
-          <View style={[styles.iconBox, { backgroundColor: '#E6FAFC' }]}>
-            <Feather name="coffee" size={20} color="#00CFE8" />
+          <View style={styles.suggestionHeader}>
+            <View style={styles.suggestionIconBox}>
+              <Feather name="coffee" size={20} color={colors.primary} />
+            </View>
+            <Text style={styles.suggestionTitle}>Dành riêng cho bạn hôm nay</Text>
           </View>
-          <View style={styles.suggestionContent}>
-            <Text style={styles.suggestionTitle}>Uống trà hoa cúc ấm</Text>
-            <Text style={styles.suggestionDesc}>Giúp giảm co thắt và thư giãn tinh thần hiệu quả.</Text>
+          <Text style={styles.suggestionText}>
+            • Uống một ly trà hoa cúc ấm.{"\n"}
+            • Nghe một bản nhạc nhẹ nhàng.{"\n"}
+            • Dành 15 phút đi bộ chậm.{"\n"}
+            • Tránh ăn đồ cay nóng và dầu mỡ.
+          </Text>
+        </View>
+
+        <View style={styles.preferencesSection}>
+          <Text style={styles.sectionTitle}>Sở thích của bạn</Text>
+          <Text style={styles.sectionDesc}>Chồng sẽ thấy danh sách này để mua đồ cho bạn.</Text>
+          
+          <View style={styles.tagContainer}>
+            <Text style={styles.tagLabel}>Món ăn vặt:</Text>
+            {preferences.favoriteFoods.map(item => (
+              <View key={item} style={styles.tag}>
+                <Text style={styles.tagText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+          
+          <View style={styles.tagContainer}>
+            <Text style={styles.tagLabel}>Đồ giảm đau:</Text>
+            {preferences.comfortItems.map(item => (
+              <View key={item} style={styles.tag}>
+                <Text style={styles.tagText}>{item}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
-        <View style={styles.suggestionCard}>
-          <View style={[styles.iconBox, { backgroundColor: '#F9F0FF' }]}>
-            <Feather name="moon" size={20} color="#9D8DF1" />
-          </View>
-          <View style={styles.suggestionContent}>
-            <Text style={styles.suggestionTitle}>Ngủ đủ 8 tiếng</Text>
-            <Text style={styles.suggestionDesc}>Tránh thức khuya để cơ thể phục hồi năng lượng tối đa.</Text>
-          </View>
-        </View>
-
-        <View style={styles.suggestionCard}>
-          <View style={[styles.iconBox, { backgroundColor: '#FFF0F5' }]}>
-            <Feather name="music" size={20} color={colors.primary} />
-          </View>
-          <View style={styles.suggestionContent}>
-            <Text style={styles.suggestionTitle}>Nghe nhạc thư giãn</Text>
-            <Text style={styles.suggestionDesc}>Bật một bản nhạc Lofi nhẹ nhàng để làm dịu tâm trạng.</Text>
-          </View>
-        </View>
+        <Pressable style={styles.partnerBtn} onPress={() => router.push('/partner')}>
+          <MaterialCommunityIcons name="shield-account-outline" size={24} color={colors.primary} />
+          <Text style={styles.partnerBtnText}>Cài đặt Quyền chia sẻ cho Chồng</Text>
+          <Feather name="chevron-right" size={20} color={colors.primary} />
+        </Pressable>
 
       </ScrollView>
     </View>
@@ -72,20 +112,32 @@ export default function CareCenter() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: colors.background },
-  backButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'flex-start' },
+  backBtn: { width: 44, height: 44, justifyContent: 'center' },
   headerTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
-  
   scrollContent: { padding: 24, paddingBottom: 60 },
+  
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 8, marginTop: 10 },
+  sectionDesc: { fontSize: 14, color: colors.textMuted, marginBottom: 20, lineHeight: 22 },
+  
+  levelContainer: { marginBottom: 30 },
+  levelCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, padding: 16, borderRadius: 20, marginBottom: 12, borderWidth: 2, borderColor: 'transparent', boxShadow: '0px 4px 12px rgba(0,0,0,0.03)' },
+  iconBox: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+  levelInfo: { flex: 1 },
+  levelTitle: { fontSize: 16, fontWeight: '800', marginBottom: 4 },
+  levelDesc: { fontSize: 13, color: colors.textMuted },
+  
+  suggestionCard: { backgroundColor: colors.card, padding: 20, borderRadius: 24, marginBottom: 30, borderWidth: 1, borderColor: colors.primaryLight + '50' },
+  suggestionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  suggestionIconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryLight + '30', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  suggestionTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
+  suggestionText: { fontSize: 15, color: colors.textMuted, lineHeight: 26 },
 
-  welcomeCard: { backgroundColor: colors.card, padding: 30, borderRadius: 32, alignItems: 'center', marginBottom: 35, boxShadow: '0px 12px 24px rgba(255, 141, 161, 0.1)' },
-  welcomeTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 10 },
-  welcomeText: { fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
+  preferencesSection: { marginBottom: 30 },
+  tagContainer: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 },
+  tagLabel: { width: '100%', fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 8 },
+  tag: { backgroundColor: 'white', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8, marginBottom: 8, borderWidth: 1, borderColor: '#E0E0E0' },
+  tagText: { fontSize: 14, color: colors.text },
 
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 20, letterSpacing: -0.5 },
-
-  suggestionCard: { flexDirection: 'row', backgroundColor: colors.card, padding: 20, borderRadius: 24, marginBottom: 15, alignItems: 'center', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.03)' },
-  iconBox: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  suggestionContent: { flex: 1 },
-  suggestionTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 },
-  suggestionDesc: { fontSize: 13, color: colors.textMuted, lineHeight: 18 }
+  partnerBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primaryLight + '20', padding: 20, borderRadius: 20, borderWidth: 1, borderColor: colors.primaryLight },
+  partnerBtnText: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.primaryDark, marginLeft: 12 },
 });

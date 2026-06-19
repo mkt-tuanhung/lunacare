@@ -34,7 +34,7 @@ export default function Calendar() {
   // Render các ngày kinh nguyệt thực tế
   periodEvents.forEach(ev => {
     const start = new Date(ev.startDate);
-    const end = new Date(ev.endDate);
+    const end = new Date(ev.endDate || ev.startDate);
     if (start.getFullYear() === year && start.getMonth() === month) {
       for (let d = start.getDate(); d <= Math.min(end.getDate(), daysInMonth); d++) {
         PERIOD_DAYS.push(d);
@@ -43,7 +43,7 @@ export default function Calendar() {
   });
 
   // Render dự đoán (Tương lai)
-  if (prediction) {
+  if (prediction && prediction.predictedStartDate && prediction.predictedEndDate) {
     const pStart = new Date(prediction.predictedStartDate);
     const pEnd = new Date(prediction.predictedEndDate);
     if (pStart.getFullYear() === year && pStart.getMonth() === month) {

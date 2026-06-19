@@ -1,82 +1,139 @@
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
-import { Feather } from '@expo/vector-icons';
-import { useProfileStore } from '../../store/useProfileStore';
-import QRCode from 'react-native-qrcode-svg';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { usePartnerStore } from '../../store/usePartnerStore';
 
-export default function WifePartnerScreen() {
+export default function PartnerMode() {
   const router = useRouter();
-  const profile = useProfileStore(state => state.profile);
-
-  // Giả lập một mã bí mật từ UID của vợ (Thực tế sẽ fetch từ Database `pairing_code`)
-  const pairingCode = profile?.uid ? `LUNA_CONNECT_${profile.uid}` : 'ERROR_NO_UID';
+  const { isPartnerModeEnabled, permissions, togglePartnerMode, updatePermissions } = usePartnerStore();
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={28} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Gắn kết Trái tim</Text>
-        <View style={{ width: 44 }} />
+        <Text style={styles.headerTitle}>Chế độ Người Đồng Hành</Text>
+        <View style={styles.backBtn} />
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.qrCard}>
-          <Text style={styles.qrTitle}>Quét để kết nối</Text>
-          <Text style={styles.qrDesc}>
-            Bảo Chồng tải app, chọn mục "Tôi là Chồng" và đưa Camera lên quét mã QR này nhé.
-          </Text>
-          
-          <View style={styles.qrBox}>
-            {profile?.uid ? (
-              <QRCode
-                value={pairingCode}
-                size={220}
-                color={colors.primary}
-                backgroundColor="transparent"
-              />
-            ) : (
-              <Text>Lỗi tải mã</Text>
-            )}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        <View style={styles.masterToggleCard}>
+          <View style={styles.masterInfo}>
+            <Text style={styles.masterTitle}>Kích hoạt Partner Mode</Text>
+            <Text style={styles.masterDesc}>Cho phép Chồng kết nối và nhận gợi ý chăm sóc bạn.</Text>
           </View>
-          
-          <Text style={styles.codeText}>{pairingCode}</Text>
-          
-          <View style={styles.statusBox}>
-            <View style={styles.dot} />
-            <Text style={styles.statusText}>Đang chờ Chồng kết nối...</Text>
-          </View>
+          <Switch
+            value={isPartnerModeEnabled}
+            onValueChange={togglePartnerMode}
+            trackColor={{ false: '#E0E0E0', true: colors.primary }}
+          />
         </View>
 
-        <Pressable style={styles.btnShare}>
-          <Feather name="share" size={20} color="white" />
-          <Text style={styles.btnShareText}>Chia sẻ mã qua Zalo</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+        {isPartnerModeEnabled && (
+          <View style={styles.permissionsSection}>
+            <Text style={styles.sectionTitle}>Quản lý Quyền Truy Cập</Text>
+            <Text style={styles.sectionDesc}>LunaCare đề cao sự riêng tư của bạn. Hãy chọn những thông tin bạn thoải mái chia sẻ với Chồng.</Text>
+
+            <View style={styles.permissionCard}>
+              <View style={styles.permRow}>
+                <View style={styles.permIconBox}><Feather name="heart" size={20} color={colors.text} /></View>
+                <View style={styles.permInfo}>
+                  <Text style={styles.permTitle}>Mức độ cần hỗ trợ & Gợi ý</Text>
+                  <Text style={styles.permDesc}>Chia sẻ mức Xanh/Vàng/Cam/Đỏ để nhận được sự chăm sóc phù hợp.</Text>
+                </View>
+                <Switch 
+                  value={permissions.shareSupportLevel} 
+                  onValueChange={(val) => updatePermissions({ shareSupportLevel: val, shareCareSuggestions: val })}
+                  trackColor={{ false: '#E0E0E0', true: colors.primary }}
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.permRow}>
+                <View style={styles.permIconBox}><Feather name="calendar" size={20} color={colors.text} /></View>
+                <View style={styles.permInfo}>
+                  <Text style={styles.permTitle}>Giai đoạn Chu kỳ</Text>
+                  <Text style={styles.permDesc}>Cho phép chồng biết bạn sắp đến kỳ hay đang hành kinh.</Text>
+                </View>
+                <Switch 
+                  value={permissions.shareCyclePhase} 
+                  onValueChange={(val) => updatePermissions({ shareCyclePhase: val, sharePeriodPrediction: val })}
+                  trackColor={{ false: '#E0E0E0', true: colors.primary }}
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.permRow}>
+                <View style={styles.permIconBox}><Feather name="smile" size={20} color={colors.text} /></View>
+                <View style={styles.permInfo}>
+                  <Text style={styles.permTitle}>Tâm trạng (Mood)</Text>
+                  <Text style={styles.permDesc}>Chia sẻ tâm trạng tổng quan của bạn hôm nay.</Text>
+                </View>
+                <Switch 
+                  value={permissions.shareMoodLevel} 
+                  onValueChange={(val) => updatePermissions({ shareMoodLevel: val })}
+                  trackColor={{ false: '#E0E0E0', true: colors.primary }}
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.permRow}>
+                <View style={styles.permIconBox}><Feather name="activity" size={20} color={colors.text} /></View>
+                <View style={styles.permInfo}>
+                  <Text style={styles.permTitle}>Chi tiết Triệu chứng</Text>
+                  <Text style={styles.permDesc}>Chia sẻ các triệu chứng cụ thể (Khuyên dùng: Tắt để giữ riêng tư).</Text>
+                </View>
+                <Switch 
+                  value={permissions.shareSymptoms} 
+                  onValueChange={(val) => updatePermissions({ shareSymptoms: val })}
+                  trackColor={{ false: '#E0E0E0', true: colors.primary }}
+                />
+              </View>
+            </View>
+
+            <Pressable style={styles.inviteBtn} onPress={() => alert('Mã kết nối: LUNA-1234. Gửi mã này cho chồng để liên kết!')}>
+              <MaterialCommunityIcons name="link-variant" size={24} color="white" />
+              <Text style={styles.inviteBtnText}>Lấy Mã Kết Nối</Text>
+            </Pressable>
+
+          </View>
+        )}
+
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: colors.background },
   backBtn: { width: 44, height: 44, justifyContent: 'center' },
   headerTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
+  scrollContent: { padding: 24, paddingBottom: 60 },
   
-  content: { padding: 24, alignItems: 'center' },
-  qrCard: { backgroundColor: colors.card, width: '100%', borderRadius: 30, padding: 30, alignItems: 'center', boxShadow: '0px 10px 30px rgba(255, 141, 161, 0.2)' },
-  qrTitle: { fontSize: 24, fontWeight: '800', color: colors.primary, marginBottom: 10 },
-  qrDesc: { fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 22, marginBottom: 30 },
+  masterToggleCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, padding: 20, borderRadius: 24, marginBottom: 30, boxShadow: '0px 4px 12px rgba(0,0,0,0.03)' },
+  masterInfo: { flex: 1, paddingRight: 20 },
+  masterTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 4 },
+  masterDesc: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
   
-  qrBox: { width: 250, height: 250, backgroundColor: 'white', borderRadius: 20, justifyContent: 'center', alignItems: 'center', boxShadow: '0px 4px 15px rgba(0,0,0,0.05)', marginBottom: 20 },
-  codeText: { fontSize: 16, fontWeight: '700', color: colors.textMuted, letterSpacing: 2, marginBottom: 30 },
+  permissionsSection: { marginTop: 10 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 8 },
+  sectionDesc: { fontSize: 14, color: colors.textMuted, marginBottom: 20, lineHeight: 22 },
 
-  statusBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.primaryLight + '30', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
-  statusText: { color: colors.primaryDark, fontWeight: '600' },
+  permissionCard: { backgroundColor: colors.card, borderRadius: 24, padding: 20, marginBottom: 30, boxShadow: '0px 4px 12px rgba(0,0,0,0.03)' },
+  permRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
+  permIconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  permInfo: { flex: 1, paddingRight: 10 },
+  permTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  permDesc: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
+  divider: { height: 1, backgroundColor: '#F0F0F0', marginVertical: 4 },
 
-  btnShare: { flexDirection: 'row', backgroundColor: colors.primary, width: '100%', padding: 20, borderRadius: 24, justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 30, boxShadow: '0px 8px 16px rgba(255, 141, 161, 0.3)' },
-  btnShareText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
+  inviteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, padding: 18, borderRadius: 24 },
+  inviteBtnText: { fontSize: 16, fontWeight: '800', color: 'white', marginLeft: 10 },
 });

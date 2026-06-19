@@ -38,6 +38,7 @@ interface ProfileState {
     displayName: string;
     onboardingCompleted: boolean;
     healthProfile: HealthProfile | null;
+    role?: string;
   } | null;
   setProfile: (profile: any) => void;
   updateHealthProfile: (data: Partial<HealthProfile>) => void;

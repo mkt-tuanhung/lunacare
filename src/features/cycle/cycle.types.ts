@@ -23,8 +23,11 @@ export type PeriodEvent = {
   userId: string;
   startDate: string;
   endDate?: string;
+  flowLevel?: string;
+  symptoms?: string[];
+  moods?: string[];
   notes?: string;
-  isConfirmed: boolean;
+  isConfirmed?: boolean;
   createdAt: string;
   updatedAt: string;
 };

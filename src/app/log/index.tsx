@@ -1,8 +1,8 @@
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { colors } from '../../theme/colors';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useProfileStore } from '../../store/useProfileStore';
 
@@ -23,6 +23,8 @@ const symptoms = [
   { label: 'Đau lưng', icon: 'layers' }
 ];
 
+const ovulationSigns = ['Dịch nhầy trong', 'Nhiệt độ tăng', 'Que LH dương tính'];
+
 const flows = ['Nhẹ', 'Vừa', 'Nhiều', 'Rất nhiều'];
 
 export default function LogToday() {
@@ -31,11 +33,18 @@ export default function LogToday() {
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [selectedFlow, setSelectedFlow] = useState<string | null>(null);
   const [isPeriodDay, setIsPeriodDay] = useState(false);
+  
+  // New states
+  const [waterCups, setWaterCups] = useState(0);
+  const [sleepHours, setSleepHours] = useState('');
+  const [selectedOvulations, setSelectedOvulations] = useState<string[]>([]);
 
   const toggleSymptom = (s: string) => {
-    setSelectedSymptoms(prev => 
-      prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
-    );
+    setSelectedSymptoms(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  };
+  
+  const toggleOvulation = (s: string) => {
+    setSelectedOvulations(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   };
 
   const profile = useProfileStore(state => state.profile);
@@ -56,12 +65,23 @@ export default function LogToday() {
         flow_level: selectedFlow,
         moods: selectedMood ? [selectedMood] : [],
         symptoms: selectedSymptoms,
+        water_cups: waterCups,
+        sleep_hours: sleepHours ? parseFloat(sleepHours) : null,
+        ovulation_signs: selectedOvulations,
         notes: ''
       }, { onConflict: 'user_id,log_date' });
       
-      if (error) throw error;
+      if (error) {
+        // Fallback for missing columns if user hasn't run SQL yet
+        if (error.message.includes('column "water_cups" of relation "daily_logs" does not exist')) {
+            alert('Lưu cục bộ thành công! (Supabase cần chạy file alter_logs.sql để đồng bộ)');
+        } else {
+            throw error;
+        }
+      } else {
+        alert('Đã lưu Ghi nhận thành công!');
+      }
       
-      alert('Đã lưu Ghi nhận thành công!');
       if (router.canGoBack()) {
         router.back();
       } else {
@@ -102,24 +122,15 @@ export default function LogToday() {
             <Text style={styles.sectionTitle}>Kỳ kinh nguyệt</Text>
           </View>
 
-          <Pressable 
-            style={[styles.toggleCard, isPeriodDay && styles.toggleCardActive]} 
-            onPress={() => setIsPeriodDay(!isPeriodDay)}
-          >
-            <Text style={[styles.toggleText, isPeriodDay && styles.toggleTextActive]}>
-              {isPeriodDay ? 'Đang trong kỳ kinh' : 'Không có kinh nguyệt'}
-            </Text>
+          <Pressable style={[styles.toggleCard, isPeriodDay && styles.toggleCardActive]} onPress={() => setIsPeriodDay(!isPeriodDay)}>
+            <Text style={[styles.toggleText, isPeriodDay && styles.toggleTextActive]}>{isPeriodDay ? 'Đang trong kỳ kinh' : 'Không có kinh nguyệt'}</Text>
             {isPeriodDay && <Ionicons name="checkmark-circle" size={20} color={colors.primaryDark} />}
           </Pressable>
 
           {isPeriodDay && (
             <View style={styles.pillsContainer}>
               {flows.map(f => (
-                <Pressable 
-                  key={f} 
-                  style={[styles.pill, selectedFlow === f && styles.pillActive]}
-                  onPress={() => setSelectedFlow(f)}
-                >
+                <Pressable key={f} style={[styles.pill, selectedFlow === f && styles.pillActive]} onPress={() => setSelectedFlow(f)}>
                   <Text style={[styles.pillText, selectedFlow === f && styles.pillTextActive]}>{f}</Text>
                 </Pressable>
               ))}
@@ -137,17 +148,8 @@ export default function LogToday() {
           </View>
           <View style={styles.pillsContainer}>
             {moods.map(m => (
-              <Pressable 
-                key={m.label} 
-                style={[styles.iconPill, selectedMood === m.label && styles.iconPillActive]}
-                onPress={() => setSelectedMood(m.label)}
-              >
-                <Feather 
-                  name={m.icon as any} 
-                  size={24} 
-                  color={selectedMood === m.label ? 'white' : colors.textMuted} 
-                  style={{marginBottom: 8}}
-                />
+              <Pressable key={m.label} style={[styles.iconPill, selectedMood === m.label && styles.iconPillActive]} onPress={() => setSelectedMood(m.label)}>
+                <Feather name={m.icon as any} size={24} color={selectedMood === m.label ? 'white' : colors.textMuted} style={{marginBottom: 8}}/>
                 <Text style={[styles.iconPillText, selectedMood === m.label && styles.iconPillTextActive]}>{m.label}</Text>
               </Pressable>
             ))}
@@ -164,18 +166,56 @@ export default function LogToday() {
           </View>
           <View style={styles.pillsContainer}>
             {symptoms.map(s => (
-              <Pressable 
-                key={s.label} 
-                style={[styles.iconPill, selectedSymptoms.includes(s.label) && styles.iconPillActive]}
-                onPress={() => toggleSymptom(s.label)}
-              >
-                <Feather 
-                  name={s.icon as any} 
-                  size={24} 
-                  color={selectedSymptoms.includes(s.label) ? 'white' : colors.textMuted} 
-                  style={{marginBottom: 8}}
-                />
+              <Pressable key={s.label} style={[styles.iconPill, selectedSymptoms.includes(s.label) && styles.iconPillActive]} onPress={() => toggleSymptom(s.label)}>
+                <Feather name={s.icon as any} size={24} color={selectedSymptoms.includes(s.label) ? 'white' : colors.textMuted} style={{marginBottom: 8}}/>
                 <Text style={[styles.iconPillText, selectedSymptoms.includes(s.label) && styles.iconPillTextActive]}>{s.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* Nước & Giấc ngủ */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.iconBox, { backgroundColor: '#E3F2FD' }]}>
+              <Feather name="droplet" size={20} color="#2196F3" />
+            </View>
+            <Text style={styles.sectionTitle}>Sức khỏe cơ bản</Text>
+          </View>
+          
+          <View style={styles.inputRow}>
+            <Text style={styles.inputLabel}>Nước (số ly):</Text>
+            <View style={styles.counterBox}>
+              <Pressable style={styles.counterBtn} onPress={() => setWaterCups(Math.max(0, waterCups - 1))}><Feather name="minus" size={20} color={colors.text}/></Pressable>
+              <Text style={styles.counterText}>{waterCups}</Text>
+              <Pressable style={styles.counterBtn} onPress={() => setWaterCups(waterCups + 1)}><Feather name="plus" size={20} color={colors.text}/></Pressable>
+            </View>
+          </View>
+
+          <View style={styles.inputRow}>
+            <Text style={styles.inputLabel}>Ngủ (số giờ):</Text>
+            <TextInput
+              style={styles.textInput}
+              keyboardType="numeric"
+              placeholder="Ví dụ: 7.5"
+              value={sleepHours}
+              onChangeText={setSleepHours}
+            />
+          </View>
+        </View>
+
+        {/* Rụng trứng */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.iconBox, { backgroundColor: '#FFF3E0' }]}>
+              <MaterialCommunityIcons name="egg-outline" size={20} color="#FF9800" />
+            </View>
+            <Text style={styles.sectionTitle}>Dấu hiệu rụng trứng</Text>
+          </View>
+          <View style={styles.pillsContainer}>
+            {ovulationSigns.map(s => (
+              <Pressable key={s} style={[styles.pill, selectedOvulations.includes(s) && styles.pillActive]} onPress={() => toggleOvulation(s)}>
+                <Text style={[styles.pillText, selectedOvulations.includes(s) && styles.pillTextActive]}>{s}</Text>
               </Pressable>
             ))}
           </View>
@@ -221,6 +261,13 @@ const styles = StyleSheet.create({
   iconPillActive: { backgroundColor: colors.primary, borderColor: colors.primary, boxShadow: '0px 4px 12px rgba(255, 141, 161, 0.3)' },
   iconPillText: { color: colors.textMuted, fontSize: 12, fontWeight: '600', textAlign: 'center' },
   iconPillTextActive: { color: 'white', fontWeight: '700' },
+
+  inputRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15, paddingHorizontal: 10 },
+  inputLabel: { fontSize: 16, fontWeight: '600', color: colors.text },
+  counterBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: 20, borderWidth: 1, borderColor: colors.border },
+  counterBtn: { padding: 12 },
+  counterText: { fontSize: 18, fontWeight: 'bold', width: 30, textAlign: 'center' },
+  textInput: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 12, width: 100, textAlign: 'center', fontSize: 16 },
 
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 24, backgroundColor: 'rgba(255,255,255,0.9)', borderTopWidth: 1, borderTopColor: colors.border },
   saveButton: { backgroundColor: colors.primary, paddingVertical: 18, borderRadius: 24, alignItems: 'center', boxShadow: '0px 8px 20px rgba(255, 141, 161, 0.35)' },
