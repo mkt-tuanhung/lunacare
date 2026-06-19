@@ -64,12 +64,12 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .update({ 
+        .upsert({ 
+          id: profile.uid, // UUID từ Supabase Auth
           display_name: profile.displayName,
           health_profile: profile.healthProfile,
           is_onboarded: true
-        })
-        .eq('uid', profile.uid);
+        });
         
       if (error) throw error;
       console.log("✅ Đã cập nhật Health Profile lên Supabase thành công!");
