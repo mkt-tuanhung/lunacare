@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 
 export interface HealthProfile {
@@ -42,7 +44,9 @@ interface ProfileState {
   saveProfileToSupabase: () => Promise<void>;
 }
 
-export const useProfileStore = create<ProfileState>((set, get) => ({
+export const useProfileStore = create<ProfileState>()(
+  persist(
+    (set, get) => ({
   profile: null,
   setProfile: (profile) => set({ profile }),
   updateHealthProfile: (data) => set((state) => {
@@ -76,5 +80,9 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     } catch (error) {
       console.error("Lỗi khi lưu lên Supabase:", error);
     }
+  }),
+  {
+    name: 'lunacare-profile-storage',
+    storage: createJSONStorage(() => AsyncStorage),
   }
-}));
+));

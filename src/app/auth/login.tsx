@@ -32,21 +32,34 @@ export default function LoginWife() {
         const { error, data } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         
-        // Kiểm tra xem đã làm Onboarding chưa
-        setProfile({ uid: data.user?.id, displayName: email.split('@')[0], onboardingCompleted: false, healthProfile: null, role: 'wife' });
-        router.replace('/onboarding');
+        // Kiểm tra xem đã làm Onboarding chưa bằng cách kéo data từ bảng profiles
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('is_onboarded, health_profile, display_name')
+          .eq('id', data.user.id)
+          .single();
+
+        const isOnboarded = profileData?.is_onboarded || false;
+        
+        setProfile({ 
+          uid: data.user.id, 
+          displayName: profileData?.display_name || email.split('@')[0], 
+          onboardingCompleted: isOnboarded, 
+          healthProfile: profileData?.health_profile || null, 
+          role: 'wife' 
+        });
+
+        if (isOnboarded) {
+          router.replace('/home');
+        } else {
+          router.replace('/onboarding');
+        }
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Lỗi kết nối máy chủ!');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGoogleLogin = async () => {
-    // Chức năng này yêu cầu cài đặt Google OAuth trong Supabase Dashboard
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-    if (error) setErrorMsg('Chưa cấu hình Google OAuth trên Supabase');
   };
 
   return (
@@ -84,17 +97,6 @@ export default function LoginWife() {
           </Pressable>
         </View>
 
-        <View style={styles.divider}>
-          <View style={styles.line} />
-          <Text style={styles.dividerText}>Hoặc</Text>
-          <View style={styles.line} />
-        </View>
-
-        <Pressable style={styles.googleBtn} onPress={handleGoogleLogin}>
-          <FontAwesome5 name="google" size={18} color="#DB4437" />
-          <Text style={styles.googleBtnText}>Đăng nhập với Google</Text>
-        </Pressable>
-
         <Pressable onPress={() => setIsRegistering(!isRegistering)} style={{ marginTop: 30 }}>
           <Text style={styles.switchText}>
             {isRegistering ? 'Đã có tài khoản? Đăng nhập' : 'Chưa có tài khoản? Đăng ký ngay'}
@@ -117,13 +119,6 @@ const styles = StyleSheet.create({
   
   primaryBtn: { backgroundColor: colors.primary, padding: 20, borderRadius: 24, alignItems: 'center', marginTop: 10, boxShadow: '0px 8px 16px rgba(255, 141, 161, 0.3)' },
   primaryBtnText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-
-  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 30 },
-  line: { flex: 1, height: 1, backgroundColor: colors.border },
-  dividerText: { marginHorizontal: 15, color: colors.textMuted, fontWeight: '600' },
-
-  googleBtn: { flexDirection: 'row', backgroundColor: 'white', padding: 18, borderRadius: 24, alignItems: 'center', justifyContent: 'center', gap: 15, boxShadow: '0px 4px 12px rgba(0,0,0,0.05)' },
-  googleBtnText: { color: colors.text, fontSize: 16, fontWeight: '700' },
 
   switchText: { textAlign: 'center', color: colors.primary, fontSize: 16, fontWeight: '600' }
 });
