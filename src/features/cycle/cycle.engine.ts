@@ -102,7 +102,9 @@ Trả lời CHỈ BẰNG 1 CHUỖI JSON HỢP LỆ (KHÔNG chứa markdown code 
       textResult = await response.text();
     }
 
-    if (!textResult) return null;
+    if (!textResult) {
+      throw new Error(fetchErrorMsg || "Không nhận được phản hồi từ AI");
+    }
 
     // Loại bỏ markdown (nếu có)
     const match = textResult.match(/\{[\s\S]*\}/);
@@ -120,16 +122,16 @@ Trả lời CHỈ BẰNG 1 CHUỖI JSON HỢP LỆ (KHÔNG chứa markdown code 
     const DAY_MS = 1000 * 60 * 60 * 24;
     const diffDays = (predictedStart.getTime() - today.getTime()) / DAY_MS;
     if (diffDays > 55 || diffDays < -55) {
-       console.error(`AI dự đoán ngày quá vô lý (lệch ${diffDays} ngày). Bắt buộc Fallback.`);
-       return null; // Trả về null để Store tự động kích hoạt thuật toán Local (Fallback)
+       throw new Error(`AI dự đoán ngày quá vô lý (lệch ${diffDays} ngày)`);
     }
 
     console.log("AI Prediction Success", prediction);
     return prediction;
 
-  } catch (err) {
+  } catch (err: any) {
     console.error("AI Prediction Error:", err);
-    return null;
+    const fetchErrorMsg = err.message || "Lỗi không xác định từ máy chủ AI";
+    throw new Error(fetchErrorMsg);
   }
 }
 

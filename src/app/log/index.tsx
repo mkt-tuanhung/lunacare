@@ -108,8 +108,29 @@ export default function LogToday() {
 
       alert('Đã lưu Ghi nhận thành công!');
       
-      // BẮT BUỘC TÍNH TOÁN LẠI CHU KỲ BẰNG AI KHI CÓ TRIỆU CHỨNG MỚI
-      await useCycleStore.getState().calculatePrediction();
+      // ĐỒNG BỘ VỚI LỊCH SỬ CHU KỲ (periodEvents) NẾU ĐÁNH DẤU LÀ "CÓ KINH"
+      const cycleStore = useCycleStore.getState();
+      const todayStr = payload.log_date;
+      if (payload.is_period_day) {
+        // Kiểm tra xem 7 ngày gần đây có chu kỳ nào đang dở dang không
+        const existingEvent = cycleStore.periodEvents.find(e => {
+            const diff = Math.abs(new Date(e.startDate).getTime() - new Date(todayStr).getTime()) / (1000 * 60 * 60 * 24);
+            return diff <= 10; // Nếu cách ngày bắt đầu <= 10 ngày thì coi là cùng 1 chu kỳ
+        });
+        
+        if (existingEvent) {
+            // Cập nhật endDate nếu log ngày mới hơn
+            if (new Date(todayStr) > new Date(existingEvent.endDate || existingEvent.startDate)) {
+                cycleStore.updatePeriodEvent(existingEvent.id, { endDate: todayStr });
+            }
+        } else {
+            // Nếu không có chu kỳ nào gần đây -> Tạo chu kỳ mới ngay hôm nay!
+            cycleStore.addPeriodEvent({ startDate: todayStr, endDate: todayStr });
+        }
+      }
+
+      // BẮT BUỘC TÍNH TOÁN LẠI CHU KỲ
+      await cycleStore.calculatePrediction();
       
       if (router.canGoBack()) {
         router.back();

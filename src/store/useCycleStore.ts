@@ -88,7 +88,7 @@ export const useCycleStore = create<CycleState>()(
       profileStore.updateHealthProfile({ prediction: finalPrediction });
       profileStore.saveProfileToSupabase();
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       const { periodEvents } = get();
       const cycles = periodEvents.map(e => ({ startDate: e.startDate, endDate: e.endDate }));
@@ -101,7 +101,11 @@ export const useCycleStore = create<CycleState>()(
         if (data) recentLogs = data;
       }
       
-      set({ prediction: predictCycle(cycles, recentLogs), isPredicting: false });
+      const fallbackPrediction = predictCycle(cycles, recentLogs);
+      // Báo cho người dùng biết AI đang bị lỗi gì
+      fallbackPrediction.notes = [`[Hệ thống AI tạm ngắt]: ${error.message || 'Lỗi kết nối'}.`, ...fallbackPrediction.notes];
+      
+      set({ prediction: fallbackPrediction, isPredicting: false });
     }
   },
 
