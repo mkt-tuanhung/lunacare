@@ -52,17 +52,21 @@ export default function Calendar() {
       }
     }
 
-    const fStart = new Date(prediction.nextFertileWindow.start);
-    const fEnd = new Date(prediction.nextFertileWindow.end);
-    if (fStart.getFullYear() === year && fStart.getMonth() === month) {
-      for (let d = fStart.getDate(); d <= Math.min(fEnd.getDate(), daysInMonth); d++) {
-        FERTILE_DAYS.push(d);
+    if (prediction.fertileWindowStart && prediction.fertileWindowEnd) {
+      const fStart = new Date(prediction.fertileWindowStart);
+      const fEnd = new Date(prediction.fertileWindowEnd);
+      if (fStart.getFullYear() === year && fStart.getMonth() === month) {
+        for (let d = fStart.getDate(); d <= Math.min(fEnd.getDate(), daysInMonth); d++) {
+          FERTILE_DAYS.push(d);
+        }
       }
     }
 
-    const oDay = new Date(prediction.nextOvulationDate);
-    if (oDay.getFullYear() === year && oDay.getMonth() === month) {
-      OVULATION_DAY = oDay.getDate();
+    if (prediction.ovulationDate) {
+      const oDay = new Date(prediction.ovulationDate);
+      if (oDay.getFullYear() === year && oDay.getMonth() === month) {
+        OVULATION_DAY = oDay.getDate();
+      }
     }
   }
 
