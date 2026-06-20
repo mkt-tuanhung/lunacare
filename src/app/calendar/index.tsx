@@ -21,7 +21,9 @@ export default function Calendar() {
   
   const [monthLogs, setMonthLogs] = useState<any[]>([]);
   const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const { togglePeriodDay } = useCycleStore();
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -120,15 +122,16 @@ export default function Calendar() {
   const handleDayPress = (day: number) => {
     // Chuyển sang định dạng YYYY-MM-DD
     const dateStr = new Date(Date.UTC(year, month, day)).toISOString().split('T')[0];
-    const log = monthLogs.find(l => l.log_date === dateStr);
+    setSelectedDateStr(dateStr);
     
-    if (log) {
-      setSelectedLog(log);
-      setModalVisible(true);
-    } else {
-      alert('Chưa có ghi nhận nào trong ngày này.');
-    }
+    const log = monthLogs.find(l => l.log_date === dateStr);
+    setSelectedLog(log || null);
+    setModalVisible(true);
   };
+
+  const isSelectedPeriodDay = selectedDateStr 
+    ? periodEvents.some(e => selectedDateStr >= e.startDate && selectedDateStr <= e.endDate) 
+    : false;
 
   return (
     <View style={styles.container}>
@@ -216,13 +219,28 @@ export default function Calendar() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chi tiết ngày {selectedLog && new Date(selectedLog.log_date).toLocaleDateString('vi-VN')}</Text>
+              <Text style={styles.modalTitle}>Ngày {selectedDateStr ? new Date(selectedDateStr).toLocaleDateString('vi-VN') : ''}</Text>
               <Pressable onPress={() => setModalVisible(false)} style={styles.closeBtn}>
                 <Feather name="x" size={24} color={colors.text} />
               </Pressable>
             </View>
             
-            {selectedLog && (
+            {selectedDateStr && (
+              <Pressable 
+                style={[styles.toggleBtn, isSelectedPeriodDay ? styles.toggleBtnActive : styles.toggleBtnInactive]}
+                onPress={() => {
+                   togglePeriodDay(selectedDateStr);
+                   setModalVisible(false);
+                }}
+              >
+                <Feather name={isSelectedPeriodDay ? "x" : "check"} size={22} color={isSelectedPeriodDay ? "#D32F2F" : "white"} />
+                <Text style={[styles.toggleBtnText, isSelectedPeriodDay && { color: "#D32F2F" }]}>
+                  {isSelectedPeriodDay ? "Xóa ghi nhận ngày kinh này" : "Đánh dấu là ngày Hành kinh"}
+                </Text>
+              </Pressable>
+            )}
+
+            {selectedLog ? (
               <ScrollView>
                 {selectedLog.is_period_day && (
                   <View style={styles.modalRow}>
@@ -259,6 +277,8 @@ export default function Calendar() {
                   </View>
                 )}
               </ScrollView>
+            ) : (
+              <Text style={{ textAlign: 'center', marginTop: 20, color: colors.textMuted }}>Chưa có nhật ký sức khỏe nào.</Text>
             )}
           </View>
         </View>
@@ -320,6 +340,12 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
   closeBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-end' },
+  
+  toggleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 16, marginBottom: 20, gap: 10 },
+  toggleBtnInactive: { backgroundColor: '#FF4B72' },
+  toggleBtnActive: { backgroundColor: '#FFEBEE', borderWidth: 1, borderColor: '#FFCDD2' },
+  toggleBtnText: { fontSize: 16, fontWeight: '700', color: 'white' },
+
   modalRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   modalRowText: { fontSize: 16, color: colors.text, flex: 1 }
 });

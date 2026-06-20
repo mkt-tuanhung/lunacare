@@ -19,6 +19,7 @@ interface CycleState {
   setPeriodEvents: (events: PeriodEvent[], skipSync?: boolean) => void;
   toggleAiMode: (enabled: boolean) => void;
   syncEventsToSupabase: () => Promise<void>;
+  togglePeriodDay: (dateStr: string) => void;
 }
 
 export const useCycleStore = create<CycleState>()(
@@ -59,6 +60,63 @@ export const useCycleStore = create<CycleState>()(
     set((state) => {
       const newEvents = state.periodEvents.filter(e => e.id !== id);
       return { periodEvents: newEvents };
+    });
+    get().calculatePrediction();
+    get().syncEventsToSupabase();
+  },
+
+  togglePeriodDay: (dateStr) => {
+    set((state) => {
+      const { periodEvents } = state;
+      const matchingEvent = periodEvents.find(e => dateStr >= e.startDate && dateStr <= e.endDate);
+
+      const d = new Date(dateStr);
+      const prevDate = new Date(d); prevDate.setDate(d.getDate() - 1);
+      const nextDate = new Date(d); nextDate.setDate(d.getDate() + 1);
+      const prevStr = prevDate.toISOString().split('T')[0];
+      const nextStr = nextDate.toISOString().split('T')[0];
+
+      if (matchingEvent) {
+        // Remove this day
+        if (dateStr === matchingEvent.startDate && dateStr === matchingEvent.endDate) {
+          return { periodEvents: periodEvents.filter(e => e.id !== matchingEvent.id) };
+        } else if (dateStr === matchingEvent.startDate) {
+          return { periodEvents: periodEvents.map(e => e.id === matchingEvent.id ? { ...e, startDate: nextStr } : e) };
+        } else if (dateStr === matchingEvent.endDate) {
+          return { periodEvents: periodEvents.map(e => e.id === matchingEvent.id ? { ...e, endDate: prevStr } : e) };
+        } else {
+          // Split
+          const newEvent = { ...matchingEvent, id: Date.now().toString(36) + Math.random().toString(36).substring(2), startDate: nextStr };
+          const updatedEvents = periodEvents.map(e => e.id === matchingEvent.id ? { ...e, endDate: prevStr } : e);
+          return { periodEvents: [...updatedEvents, newEvent] };
+        }
+      } else {
+        // Add this day
+        const prevEvent = periodEvents.find(e => e.endDate === prevStr);
+        const nextEvent = periodEvents.find(e => e.startDate === nextStr);
+
+        if (prevEvent && nextEvent) {
+          // Merge
+          const mergedEvent = { ...prevEvent, endDate: nextEvent.endDate };
+          return { periodEvents: [...periodEvents.filter(e => e.id !== prevEvent.id && e.id !== nextEvent.id), mergedEvent] };
+        } else if (prevEvent) {
+          return { periodEvents: periodEvents.map(e => e.id === prevEvent.id ? { ...e, endDate: dateStr } : e) };
+        } else if (nextEvent) {
+          return { periodEvents: periodEvents.map(e => e.id === nextEvent.id ? { ...e, startDate: dateStr } : e) };
+        } else {
+          // New event
+          const profileStore = useProfileStore.getState();
+          const newEvent: PeriodEvent = {
+            id: Date.now().toString(36) + Math.random().toString(36).substring(2),
+            userId: profileStore.profile?.uid || 'guest',
+            startDate: dateStr,
+            endDate: dateStr,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          return { periodEvents: [...periodEvents, newEvent] };
+        }
+      }
     });
     get().calculatePrediction();
     get().syncEventsToSupabase();
