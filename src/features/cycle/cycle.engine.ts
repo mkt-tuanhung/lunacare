@@ -186,7 +186,9 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
         pmsWindowEnd: addDays(pStartDate, -1),
         confidence: "medium",
         confidenceScore: 70,
-        notes: ["Dự đoán đã được tinh chỉnh bằng thuật toán Y khoa dựa trên lối sống, bệnh lý và mức độ căng thẳng của bạn."]
+        notes: dailyAdvice.length > 0 
+          ? [...dailyAdvice, "Dự đoán đã được tinh chỉnh bằng thuật toán Y khoa dựa trên lối sống, bệnh lý và mức độ căng thẳng của bạn."] 
+          : ["Dự đoán đã được tinh chỉnh bằng thuật toán Y khoa dựa trên lối sống, bệnh lý và mức độ căng thẳng của bạn."]
       };
     }
 

@@ -127,6 +127,21 @@ export default function LogToday() {
             // Nếu không có chu kỳ nào gần đây -> Tạo chu kỳ mới ngay hôm nay!
             cycleStore.addPeriodEvent({ startDate: todayStr, endDate: todayStr, userId: payload.user_id });
         }
+      } else {
+        // NẾU NGƯỜI DÙNG BỎ CHECK "CÓ KINH"
+        // Kiểm tra xem có chu kỳ nào TRÙNG KHỚP 1 NGÀY này không
+        const exactMatch = cycleStore.periodEvents.find(e => e.startDate === todayStr && e.endDate === todayStr);
+        if (exactMatch) {
+            cycleStore.deletePeriodEvent(exactMatch.id);
+        } else {
+            // Nếu là chu kỳ nhiều ngày, và người dùng bỏ check ngày cuối cùng -> Thu hẹp chu kỳ
+            const endMatch = cycleStore.periodEvents.find(e => e.endDate === todayStr);
+            if (endMatch) {
+                const prevDay = new Date(todayStr);
+                prevDay.setDate(prevDay.getDate() - 1);
+                cycleStore.updatePeriodEvent(endMatch.id, { endDate: prevDay.toISOString().split('T')[0] });
+            }
+        }
       }
 
       // BẮT BUỘC TÍNH TOÁN LẠI CHU KỲ
