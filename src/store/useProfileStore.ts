@@ -134,7 +134,6 @@ export const useProfileStore = create<ProfileState>()(
         }
       };
     });
-    });
     get().saveProfileToSupabase();
   },
   addAlbumPhotos: (urls) => {
