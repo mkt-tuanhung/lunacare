@@ -52,10 +52,12 @@ interface ProfileState {
     partnerId?: string; // ID của vợ nếu người này là chồng
     isAppLockEnabled?: boolean;
     appLockPin?: string;
+    hideNotifications?: boolean;
   } | null;
   setProfile: (profile: any) => void;
   updateHealthProfile: (data: Partial<HealthProfile>) => void;
   setAppLockEnabled: (enabled: boolean, pin?: string) => void;
+  setHideNotifications: (hide: boolean) => void;
   saveProfileToSupabase: () => Promise<void>;
 }
 
@@ -76,16 +78,31 @@ export const useProfileStore = create<ProfileState>()(
       }
     };
   }),
-  setAppLockEnabled: (enabled, pin) => set((state) => {
-    if (!state.profile) return state;
-    return {
-      profile: {
-        ...state.profile,
-        isAppLockEnabled: enabled,
-        appLockPin: pin !== undefined ? pin : state.profile.appLockPin
-      }
-    };
-  }),
+  setAppLockEnabled: (enabled, pin) => {
+    set((state) => {
+      if (!state.profile) return state;
+      return {
+        profile: {
+          ...state.profile,
+          isAppLockEnabled: enabled,
+          appLockPin: pin !== undefined ? pin : state.profile.appLockPin
+        }
+      };
+    });
+    get().saveProfileToSupabase();
+  },
+  setHideNotifications: (hide) => {
+    set((state) => {
+      if (!state.profile) return state;
+      return {
+        profile: {
+          ...state.profile,
+          hideNotifications: hide
+        }
+      };
+    });
+    get().saveProfileToSupabase();
+  },
   saveProfileToSupabase: async () => {
     const { profile } = get();
     if (!profile || !profile.uid) return;
@@ -97,7 +114,12 @@ export const useProfileStore = create<ProfileState>()(
           id: profile.uid, // UUID từ Supabase Auth
           display_name: profile.displayName,
           health_profile: profile.healthProfile,
-          is_onboarded: true
+          is_onboarded: true,
+          app_settings: {
+            isAppLockEnabled: profile.isAppLockEnabled,
+            appLockPin: profile.appLockPin,
+            hideNotifications: profile.hideNotifications
+          }
         });
         
       if (error) throw error;

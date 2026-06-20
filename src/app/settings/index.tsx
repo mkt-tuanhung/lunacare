@@ -13,7 +13,8 @@ export default function Settings() {
   const router = useRouter();
   const profileStore = useProfileStore();
   const isPinEnabled = profileStore.profile?.isAppLockEnabled || false;
-  const [hideNotifications, setHideNotifications] = useState(true);
+  const hideNotifications = profileStore.profile?.hideNotifications ?? true;
+  const setHideNotifications = (val: boolean) => profileStore.setHideNotifications(val);
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {

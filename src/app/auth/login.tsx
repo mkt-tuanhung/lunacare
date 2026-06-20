@@ -35,7 +35,7 @@ export default function LoginWife() {
         // Kiểm tra xem đã làm Onboarding chưa bằng cách kéo data từ bảng profiles
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('is_onboarded, health_profile, display_name')
+          .select('is_onboarded, health_profile, display_name, app_settings')
           .eq('id', data.user.id)
           .single();
 
@@ -46,7 +46,10 @@ export default function LoginWife() {
           displayName: profileData?.display_name || email.split('@')[0], 
           onboardingCompleted: isOnboarded, 
           healthProfile: profileData?.health_profile || null, 
-          role: 'wife' 
+          role: 'wife',
+          isAppLockEnabled: profileData?.app_settings?.isAppLockEnabled,
+          appLockPin: profileData?.app_settings?.appLockPin,
+          hideNotifications: profileData?.app_settings?.hideNotifications,
         });
 
         if (isOnboarded) {
