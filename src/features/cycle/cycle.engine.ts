@@ -88,19 +88,25 @@ export function predictCycle(
   }
 
   if (sorted.length < 2) {
-    if (healthProfile?.lastPeriodDate && healthProfile?.cycleLength) {
-      const predictedCycleLength = parseInt(String(healthProfile.cycleLength)) || 28;
-      const predictedPeriodLength = parseInt(String(healthProfile.periodDuration)) || 5;
+    // Ưu tiên dùng startDate của chu kỳ thực tế nếu có (dù chỉ 1 chu kỳ)
+    // Fallback sang lastPeriodDate từ healthProfile nếu chưa có chu kỳ nào
+    const baseDate = sorted.length === 1
+      ? sorted[0].startDate
+      : (healthProfile?.lastPeriodDate ?? null);
 
-      // Tính chu kỳ hiện tại từ lastPeriodDate
-      const curNextPeriod = addDays(healthProfile.lastPeriodDate, predictedCycleLength);
+    if (baseDate) {
+      const predictedCycleLength = parseInt(String(healthProfile?.cycleLength)) || 28;
+      const predictedPeriodLength = parseInt(String(healthProfile?.periodDuration)) || 5;
+
+      // Tính chu kỳ hiện tại từ baseDate (chu kỳ thực tế gần nhất)
+      const curNextPeriod = addDays(baseDate, predictedCycleLength);
       const curOvDate = addDays(curNextPeriod, -14);
       const curFertileStart = addDays(curOvDate, -5);
       const curFertileEnd = addDays(curOvDate, 1);
       const curPmsStart = addDays(curNextPeriod, -7);
       const curPmsEnd = addDays(curNextPeriod, -1);
 
-      // Tìm kỳ tiếp theo luôn ở tương lai
+      // Tìm kỳ tiếp theo luôn ở tương lai (tính từ curNextPeriod, không từ baseDate)
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       let pStartDate = curNextPeriod;
