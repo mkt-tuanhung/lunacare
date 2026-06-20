@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Switch, Alert, Image } from 'react-native';
 import { useEffect } from 'react';
 import { useCycleStore } from '../../store/useCycleStore';
 import { useProfileStore } from '../../store/useProfileStore';
@@ -67,9 +67,15 @@ export default function Home() {
       
       {/* Header Profile */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Chào {profile?.displayName || 'bạn'} ✨</Text>
-          <Text style={styles.subGreeting}>Hôm nay bạn cảm thấy thế nào?</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Image 
+            source={require('../../../assets/images/icon.png')} 
+            style={{ width: 44, height: 44, borderRadius: 12, marginRight: 12 }} 
+          />
+          <View>
+            <Text style={styles.greeting}>Chào {profile?.displayName || 'bạn'} ✨</Text>
+            <Text style={styles.subGreeting}>Hôm nay bạn cảm thấy thế nào?</Text>
+          </View>
         </View>
         <Pressable style={styles.profileAvatar} onPress={() => router.push('/settings')}>
           <Ionicons name="person" size={20} color={colors.primaryDark} />

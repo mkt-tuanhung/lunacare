@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
@@ -11,7 +11,12 @@ export default function RoleSelection() {
   return (
     <View style={styles.container}>
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={styles.title}>Bạn là ai?</Text>
+        <Image 
+          source={require('../../../assets/images/icon.png')} 
+          style={{ width: 100, height: 100, borderRadius: 24, marginBottom: 20 }} 
+          resizeMode="cover"
+        />
+        <Text style={styles.title}>LunaCare</Text>
         <Text style={styles.subtitle}>Hãy chọn vai trò của bạn để bắt đầu</Text>
       </View>
 
