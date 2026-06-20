@@ -140,9 +140,87 @@ export default function Home() {
   const { periodEvents, prediction, isPredicting, calculatePrediction, isAiModeEnabled, toggleAiMode } = useCycleStore();
   const { profile, updateAvatarUrl } = useProfileStore();
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingAlbum, setIsUploadingAlbum] = useState(false);
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const rippleAnim = useRef(new Animated.Value(0)).current;
+
+  const handlePickAvatar = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setIsUploading(true);
+        const url = await uploadImageToR2(result.assets[0].uri, profile?.uid || 'guest', 'avatars');
+        if (url) {
+          updateAvatarUrl(url);
+          useAlertStore.getState().showAlert('Thành công', 'Đã cập nhật ảnh đại diện');
+        } else {
+          useAlertStore.getState().showAlert('Lỗi', 'Không thể tải ảnh lên. Vui lòng thử lại.');
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      useAlertStore.getState().showAlert('Lỗi', 'Có lỗi xảy ra khi chọn ảnh.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleAvatarPress = () => {
+    if (Platform.OS === 'web') {
+      const confirm = window.confirm("Bạn muốn đổi ảnh đại diện? (Bấm OK để đổi, Cancel để vào Hồ sơ)");
+      if (confirm) handlePickAvatar();
+      else router.push('/health-profile');
+    } else {
+      Alert.alert(
+        "Tùy chọn",
+        "Bạn muốn làm gì?",
+        [
+          { text: "Cập nhật Hồ sơ", onPress: () => router.push('/health-profile') },
+          { text: "Đổi Ảnh đại diện", onPress: handlePickAvatar },
+          { text: "Hủy", style: "cancel" }
+        ]
+      );
+    }
+  };
+
+  const handlePickAlbumPhotos = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        setIsUploadingAlbum(true);
+        const uploadedUrls: string[] = [];
+        
+        for (const asset of result.assets) {
+          const url = await uploadImageToR2(asset.uri, profile?.uid || 'guest', 'albums');
+          if (url) uploadedUrls.push(url);
+        }
+
+        if (uploadedUrls.length > 0) {
+          useProfileStore.getState().addAlbumPhotos(uploadedUrls);
+          useAlertStore.getState().showAlert('Thành công', `Đã thêm ${uploadedUrls.length} ảnh vào album kỷ niệm!`);
+        } else {
+          useAlertStore.getState().showAlert('Lỗi', 'Không thể tải ảnh lên.');
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      useAlertStore.getState().showAlert('Lỗi', 'Có lỗi xảy ra khi tải ảnh.');
+    } finally {
+      setIsUploadingAlbum(false);
+    }
+  };
 
   useEffect(() => {
     // Breathing animation for the central circle
@@ -307,11 +385,11 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
         
-        {/* Top App Bar */}
+        {/* Top Header */}
         <View style={styles.topAppBar}>
-          <Pressable style={styles.profileBtn} onPress={() => router.push('/settings')} disabled={isUploading}>
+          <Pressable style={styles.profileBtn} onPress={handleAvatarPress}>
             {isUploading ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : profile?.avatarUrl ? (
@@ -460,6 +538,40 @@ export default function Home() {
           </ScrollView>
         </View>
 
+        {/* 4. Album Kỷ niệm */}
+        <View style={styles.albumSection}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 15 }}>
+            <Text style={styles.sectionTitle}>Album Kỷ niệm</Text>
+            <Pressable onPress={handlePickAlbumPhotos} disabled={isUploadingAlbum} style={{flexDirection: 'row', alignItems: 'center'}}>
+              {isUploadingAlbum ? <ActivityIndicator size="small" color={colors.primary} /> : <Feather name="plus-circle" size={24} color={colors.primary} />}
+            </Pressable>
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            snapToInterval={220} // width 200 + gap 20
+            decelerationRate="fast"
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 20, paddingVertical: 10, paddingBottom: 30 }}
+          >
+            {profile?.healthProfile?.albumUrls?.length ? (
+               profile.healthProfile.albumUrls.map((url, idx) => (
+                 <Animated.View key={idx} style={{ 
+                    shadowColor: '#000', shadowOffset: {width: 0, height: 8}, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5,
+                    transform: [{ rotate: idx % 2 === 0 ? '-2deg' : '2deg' }]
+                 }}>
+                   <Image source={{uri: url}} style={styles.albumImage} />
+                 </Animated.View>
+               ))
+            ) : (
+               <Pressable style={styles.emptyAlbumCard} onPress={handlePickAlbumPhotos}>
+                  <Feather name="image" size={32} color={colors.textMuted} />
+                  <Text style={{color: colors.textMuted, marginTop: 10, fontWeight: '600'}}>Thêm ảnh kỷ niệm</Text>
+               </Pressable>
+            )}
+          </ScrollView>
+        </View>
+
       </ScrollView>
 
       {/* Floating Action Button (Dấu cộng bay) */}
@@ -542,5 +654,9 @@ const styles = StyleSheet.create({
   navText: { fontSize: 11, color: colors.textMuted, marginTop: 4, fontWeight: '600' },
 
   actionCenter: { paddingHorizontal: 20, marginBottom: 20 },
-  actionCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, padding: 15, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.border }
+  actionCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primaryLight + '20', padding: 20, borderRadius: 24, borderWidth: 1, borderColor: colors.primaryLight, marginBottom: 10 },
+  
+  albumSection: { marginTop: 10 },
+  albumImage: { width: 200, height: 280, borderRadius: 20, borderWidth: 3, borderColor: 'white' },
+  emptyAlbumCard: { width: 200, height: 280, borderRadius: 20, backgroundColor: colors.card, justifyContent: 'center', alignItems: 'center', borderStyle: 'dashed', borderWidth: 2, borderColor: '#E0E0E0' }
 });

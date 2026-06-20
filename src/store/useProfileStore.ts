@@ -40,6 +40,9 @@ export interface HealthProfile {
   // Nhóm 6: Partner Sync
   supportLevel?: string;
   prediction?: any;
+
+  // Nhóm 7: Album ảnh
+  albumUrls?: string[];
 }
 
 interface ProfileState {
@@ -62,6 +65,8 @@ interface ProfileState {
   setAppLockEnabled: (enabled: boolean, pin?: string) => void;
   setPanicPin: (pin: string) => void;
   setHideNotifications: (hide: boolean) => void;
+  addAlbumPhotos: (urls: string[]) => void;
+  removeAlbumPhoto: (index: number) => void;
   saveProfileToSupabase: (periodEvents?: any[]) => Promise<void>;
 }
 
@@ -126,6 +131,41 @@ export const useProfileStore = create<ProfileState>()(
         profile: {
           ...state.profile,
           hideNotifications: hide
+        }
+      };
+    });
+    });
+    get().saveProfileToSupabase();
+  },
+  addAlbumPhotos: (urls) => {
+    set((state) => {
+      if (!state.profile) return state;
+      const currentUrls = state.profile.healthProfile?.albumUrls || [];
+      return {
+        profile: {
+          ...state.profile,
+          healthProfile: {
+            ...state.profile.healthProfile,
+            albumUrls: [...currentUrls, ...urls]
+          } as HealthProfile
+        }
+      };
+    });
+    get().saveProfileToSupabase();
+  },
+  removeAlbumPhoto: (index) => {
+    set((state) => {
+      if (!state.profile) return state;
+      const currentUrls = state.profile.healthProfile?.albumUrls || [];
+      const newUrls = [...currentUrls];
+      newUrls.splice(index, 1);
+      return {
+        profile: {
+          ...state.profile,
+          healthProfile: {
+            ...state.profile.healthProfile,
+            albumUrls: newUrls
+          } as HealthProfile
         }
       };
     });

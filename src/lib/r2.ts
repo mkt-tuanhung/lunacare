@@ -18,7 +18,7 @@ const s3Client = new S3Client({
   },
 });
 
-export const uploadAvatarToR2 = async (fileUri: string, userId: string): Promise<string | null> => {
+export const uploadImageToR2 = async (fileUri: string, userId: string, folder: string = 'avatars'): Promise<string | null> => {
   if (!R2_ACCESS_KEY_ID || !R2_ENDPOINT) {
     console.warn("Chưa cấu hình Cloudflare R2 trong file .env");
     return null;
@@ -31,7 +31,7 @@ export const uploadAvatarToR2 = async (fileUri: string, userId: string): Promise
     
     // 2. Tạo tên file duy nhất
     const ext = fileUri.split('.').pop() || 'jpg';
-    const fileName = `avatars/${userId}-${Date.now()}.${ext}`;
+    const fileName = `${folder}/${userId}-${Date.now()}.${ext}`;
 
     // 3. Tạo command
     const command = new PutObjectCommand({
