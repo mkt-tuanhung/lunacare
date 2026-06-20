@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadAvatarToR2 } from '../../lib/r2';
 import { scheduleSleepProtection, scheduleSmartGrocery } from '../../lib/notifications';
 import { useAlertStore } from '../../store/useAlertStore';
+import LottieView from 'lottie-react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -146,14 +147,25 @@ export default function Home() {
   const rippleAnim = useRef(new Animated.Value(0)).current;
   const moodBubbleAnim = useRef(new Animated.Value(0)).current;
   const moodFloatAnim = useRef(new Animated.Value(0)).current;
-  const [currentMood, setCurrentMood] = useState('✨');
+
+  // Lottie Files array
+  const moodLotties = [
+    require('../../../assets/images/moods/Cool emoji.json'),
+    require('../../../assets/images/moods/Fire.json'),
+    require('../../../assets/images/moods/LMAO.json'),
+    require('../../../assets/images/moods/Money.json'),
+    require('../../../assets/images/moods/Sad Emoji (1).json'),
+    require('../../../assets/images/moods/Sad Emoji (2).json'),
+    require('../../../assets/images/moods/Sad Emoji.json'),
+    require('../../../assets/images/moods/Star Strike Emoji.json')
+  ];
+
+  const [currentMood, setCurrentMood] = useState(moodLotties[0]);
 
   useEffect(() => {
     // Cute mood bubble logic
-    const moods = ['🌸', '✨', '🥺', '🥰', '😴', '🍓', '🍡', '☁️', '🎀'];
-    
     const showMoodBubble = () => {
-      setCurrentMood(moods[Math.floor(Math.random() * moods.length)]);
+      setCurrentMood(moodLotties[Math.floor(Math.random() * moodLotties.length)]);
       
       Animated.spring(moodBubbleAnim, {
         toValue: 1,
@@ -428,7 +440,12 @@ export default function Home() {
               ]
             }]}>
               <View style={styles.moodBubbleTail} />
-              <Text style={styles.moodEmoji}>{currentMood}</Text>
+              <LottieView
+                source={currentMood}
+                autoPlay
+                loop
+                style={{ width: 36, height: 36 }}
+              />
             </Animated.View>
           </View>
           
