@@ -1,340 +1,375 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Switch, Alert, Image } from 'react-native';
-import { useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Switch, Alert, Image, Platform } from 'react-native';
+import { useEffect, useState, useMemo } from 'react';
 import { useCycleStore } from '../../store/useCycleStore';
 import { useProfileStore } from '../../store/useProfileStore';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { Feather, Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
+// ---------------- Helper: Format Date ----------------
+const getDayName = (d: Date) => {
+  const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  return days[d.getDay()];
+};
+
+// ---------------- Component: Week Calendar ----------------
+const WeekCalendar = ({ 
+  currentDate, 
+  periodEvents, 
+  prediction 
+}: { 
+  currentDate: Date, 
+  periodEvents: any[], 
+  prediction: any 
+}) => {
+  const weekDays = useMemo(() => {
+    const days = [];
+    const d = new Date(currentDate);
+    d.setHours(0, 0, 0, 0);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is sunday
+    const monday = new Date(d.setDate(diff));
+    
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + i);
+      days.push(date);
+    }
+    return days;
+  }, [currentDate]);
+
+  const todayStr = currentDate.toISOString().split('T')[0];
+
+  const getDayStyle = (date: Date) => {
+    const dStr = date.toISOString().split('T')[0];
+    
+    let isPeriod = false;
+    for (const e of periodEvents) {
+      if (dStr >= e.startDate && dStr <= e.endDate) {
+        isPeriod = true;
+        break;
+      }
+    }
+
+    let isFertile = false;
+    let isOvulation = false;
+    if (prediction && prediction.fertileWindowStart && prediction.fertileWindowEnd) {
+      if (dStr >= prediction.fertileWindowStart && dStr <= prediction.fertileWindowEnd) {
+        isFertile = true;
+        if (dStr === prediction.ovulationDate) isOvulation = true;
+      }
+    }
+
+    let isToday = dStr === todayStr;
+
+    return { isPeriod, isFertile, isOvulation, isToday };
+  };
+
+  return (
+    <View style={styles.weekCalendarContainer}>
+      <Text style={styles.monthHeader}>Tháng {currentDate.getMonth() + 1}</Text>
+      <View style={styles.weekRow}>
+        {weekDays.map((date, idx) => {
+          const { isPeriod, isFertile, isOvulation, isToday } = getDayStyle(date);
+          return (
+            <View key={idx} style={styles.dayCol}>
+              <Text style={[styles.dayName, isToday && { fontWeight: 'bold', color: colors.text }]}>{getDayName(date)}</Text>
+              <View style={[
+                styles.dayCircle,
+                isToday && styles.dayCircleToday,
+                isPeriod && { backgroundColor: '#FF4B72' },
+                isFertile && !isPeriod && { backgroundColor: isOvulation ? '#00B8D4' : '#E0F7FA' },
+              ]}>
+                <Text style={[
+                  styles.dayDate,
+                  (isPeriod || isOvulation) && { color: 'white', fontWeight: 'bold' },
+                  isToday && !isPeriod && !isOvulation && { color: colors.primaryDark, fontWeight: 'bold' }
+                ]}>
+                  {date.getDate()}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+// ---------------- Component: Bottom NavBar ----------------
+const BottomNavBar = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  return (
+    <View style={styles.bottomNavContainer}>
+      <Pressable style={styles.navItem} onPress={() => router.push('/home')}>
+        <Ionicons name={pathname === '/home' ? "calendar" : "calendar-outline"} size={24} color={pathname === '/home' ? colors.primary : colors.textMuted} />
+        <Text style={[styles.navText, pathname === '/home' && { color: colors.primary, fontWeight: '600' }]}>Hôm nay</Text>
+      </Pressable>
+      <Pressable style={styles.navItem} onPress={() => router.push('/insights')}>
+        <MaterialCommunityIcons name={pathname === '/insights' ? "chart-arc" : "chart-arc"} size={24} color={pathname === '/insights' ? colors.primary : colors.textMuted} />
+        <Text style={[styles.navText, pathname === '/insights' && { color: colors.primary, fontWeight: '600' }]}>Phân tích</Text>
+      </Pressable>
+      <Pressable style={styles.navItem} onPress={() => router.push('/chat')}>
+        <MaterialCommunityIcons name={pathname === '/chat' ? "robot" : "robot-outline"} size={24} color={pathname === '/chat' ? colors.primary : colors.textMuted} />
+        <Text style={[styles.navText, pathname === '/chat' && { color: colors.primary, fontWeight: '600' }]}>Trợ lý AI</Text>
+      </Pressable>
+      <Pressable style={styles.navItem} onPress={() => router.push('/partner')}>
+        <FontAwesome5 name={pathname === '/partner' ? "user-friends" : "user-friends"} size={20} color={pathname === '/partner' ? colors.primary : colors.textMuted} />
+        <Text style={[styles.navText, pathname === '/partner' && { color: colors.primary, fontWeight: '600' }]}>Bạn tình</Text>
+      </Pressable>
+    </View>
+  );
+};
+
+
+// ---------------- Main Screen ----------------
 export default function Home() {
-  const { prediction, isPredicting, calculatePrediction, isAiModeEnabled, toggleAiMode } = useCycleStore();
+  const { periodEvents, prediction, isPredicting, calculatePrediction, isAiModeEnabled, toggleAiMode } = useCycleStore();
   const profile = useProfileStore((state) => state.profile);
   const router = useRouter();
 
-  // Tự chữa lành lỗi Cache (Nếu App đang load lại dữ liệu cũ bị lỗi 10000+ ngày)
   useEffect(() => {
     if (prediction?.predictedStartDate) {
       const start = new Date(prediction.predictedStartDate).getTime();
       const diff = (start - new Date().getTime()) / (1000 * 60 * 60 * 24);
-      if (diff > 55 || diff < -55) {
-        console.warn("Phát hiện dữ liệu Cache lỗi (lệch > 55 ngày). Đang gọi AI tính toán lại...");
-        calculatePrediction();
-      }
+      if (diff > 55 || diff < -55) calculatePrediction();
     }
   }, [prediction?.predictedStartDate]);
 
-  // Lấy width nhưng giới hạn kích thước tối đa cho web (ví dụ max width của mobile screen)
-  const windowWidth = Dimensions.get('window').width;
-  const screenWidth = Math.min(windowWidth, 400); // Giới hạn width như trên điện thoại
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayTime = today.getTime();
+  const todayStr = today.toISOString().split('T')[0];
 
-  let statusText = '';
-  let statusNumber: number | string = 0;
-  let isDelayed = false;
-  let delayedDays = 0;
+  // Logic tính toán trạng thái (Phase)
+  let statusTitle = 'Đang tải...';
+  let statusSub = '';
+  let statusValue = '';
+  let circleColors = ['#F5F7FA', '#E4E7EB']; // Default
+  
+  const sortedEvents = [...periodEvents].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+  const latestEvent = sortedEvents.length > 0 ? sortedEvents[0] : null;
 
-  if (prediction?.predictedStartDate && prediction?.predictedEndDate) {
-    // Để loại bỏ sai số giờ giấc, đưa tất cả về cùng thời điểm đầu ngày (00:00)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const now = today.getTime();
+  if (isPredicting) {
+    statusTitle = 'AI đang phân tích...';
+    circleColors = ['#E1BEE7', '#CE93D8'];
+  } else if (prediction) {
+    let isBleeding = false;
+    let bleedingDay = 0;
 
-    const startDate = new Date(prediction.predictedStartDate);
-    startDate.setHours(0, 0, 0, 0);
-    const start = startDate.getTime();
+    if (latestEvent && todayStr >= latestEvent.startDate && todayStr <= latestEvent.endDate) {
+      isBleeding = true;
+      bleedingDay = Math.round((todayTime - new Date(latestEvent.startDate).getTime()) / (1000*60*60*24)) + 1;
+    }
 
-    const endDate = new Date(prediction.predictedEndDate);
-    endDate.setHours(0, 0, 0, 0);
-    const end = endDate.getTime();
-    
-    if (now < start) {
-      statusNumber = Math.round((start - now) / (1000 * 60 * 60 * 24));
-      statusText = 'Ngày nữa tới kỳ';
-    } else if (now >= start && now <= end) {
-      statusNumber = Math.round((now - start) / (1000 * 60 * 60 * 24)) + 1;
-      statusText = 'Ngày của chu kỳ';
+    if (isBleeding) {
+      statusTitle = 'Kỳ kinh nguyệt';
+      statusSub = 'Ngày';
+      statusValue = bleedingDay.toString();
+      circleColors = ['#FF758F', '#FF4B72']; // Pink-Red
+    } else if (prediction.fertileWindowStart && todayStr >= prediction.fertileWindowStart && todayStr <= prediction.fertileWindowEnd) {
+      // Fertile Window
+      if (todayStr === prediction.ovulationDate) {
+        statusTitle = 'Ngày rụng trứng';
+        statusSub = 'Cơ hội thụ thai';
+        statusValue = 'Cao';
+        circleColors = ['#00E5FF', '#00B8D4']; // Teal
+      } else {
+        const ovulDate = new Date(prediction.ovulationDate);
+        const diffToOvul = Math.round((ovulDate.getTime() - todayTime) / (1000*60*60*24));
+        statusTitle = 'Rụng trứng sau';
+        statusSub = 'ngày';
+        statusValue = diffToOvul > 0 ? diffToOvul.toString() : '0';
+        circleColors = ['#4DD0E1', '#00BCD4']; // Light Teal
+      }
     } else {
-      isDelayed = true;
-      delayedDays = Math.round((now - end) / (1000 * 60 * 60 * 24));
-      statusNumber = delayedDays;
-      statusText = 'Ngày trễ kinh';
+      // Normal Luteal / Follicular OR Delayed
+      const nextStart = new Date(prediction.predictedStartDate).getTime();
+      if (todayTime > nextStart) {
+        // Trễ kinh
+        const delayDays = Math.round((todayTime - nextStart) / (1000*60*60*24));
+        statusTitle = 'Trễ kinh';
+        statusSub = 'ngày';
+        statusValue = delayDays.toString();
+        circleColors = ['#FFB74D', '#F57C00']; // Orange
+      } else {
+        // Bình thường - Sắp tới kỳ
+        const daysToNext = Math.round((nextStart - todayTime) / (1000*60*60*24));
+        statusTitle = 'Kỳ kinh dự kiến sau';
+        statusSub = 'ngày';
+        statusValue = daysToNext.toString();
+        circleColors = ['#FFCDD2', '#F48FB1']; // Soft Pink
+      }
     }
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
-      
-      {/* Header Profile */}
-      <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Image 
-            source={require('../../../assets/images/icon.png')} 
-            style={{ width: 44, height: 44, borderRadius: 12, marginRight: 12 }} 
-          />
-          <View>
-            <Text style={styles.greeting}>Chào {profile?.displayName || 'bạn'} ✨</Text>
-            <Text style={styles.subGreeting}>Hôm nay bạn cảm thấy thế nào?</Text>
-          </View>
-        </View>
-        <Pressable style={styles.profileAvatar} onPress={() => router.push('/settings')}>
-          <Ionicons name="person" size={20} color={colors.primaryDark} />
-        </Pressable>
-      </View>
-      
-      {/* Main Cycle Card - Flo Style */}
-      <View style={styles.mainCard}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Dự đoán chu kỳ</Text>
-          <Pressable onPress={() => router.push('/calendar')} style={styles.iconButton}>
-            <Ionicons name="calendar-outline" size={22} color={colors.primary} />
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+        
+        {/* Top App Bar */}
+        <View style={styles.topAppBar}>
+          <Pressable style={styles.profileBtn} onPress={() => router.push('/settings')}>
+            <View style={styles.avatarMock}><Text style={{fontSize: 20}}>👩</Text></View>
+          </Pressable>
+          <Text style={styles.appTitle}>Luna</Text>
+          <Pressable style={styles.notiBtn}>
+            <Feather name="bell" size={24} color={colors.text} />
           </Pressable>
         </View>
 
-        {isPredicting ? (
-          <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="robot-outline" size={40} color={colors.primary} style={{marginBottom: 15}} />
-            <Text style={styles.emptyText}>AI đang phân tích dữ liệu và tính toán ngày kinh cho bạn...</Text>
-          </View>
-        ) : prediction ? (
-          <View style={styles.circleContainer}>
-            <View style={[styles.largeCircle, isDelayed && { borderColor: '#F44336' }]}>
-              <View style={[styles.innerCircle, isDelayed && { backgroundColor: '#FFEBEE' }]}>
-                <View style={{alignItems: 'center'}}>
-                  <Text style={[styles.daysNumber, isDelayed && { color: '#D32F2F', fontSize: 36 }]}>{statusNumber}</Text>
-                  <Text style={[styles.daysText, isDelayed && { color: '#D32F2F', fontWeight: 'bold' }]}>{statusText}</Text>
-                </View>
+        {/* 1. Week Calendar */}
+        <WeekCalendar currentDate={today} periodEvents={periodEvents} prediction={prediction} />
+
+        {/* 2. Hero Circle */}
+        <View style={styles.heroSection}>
+          <LinearGradient
+            colors={circleColors}
+            style={styles.heroCircle}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Text style={styles.heroTitle}>{statusTitle}</Text>
+            {statusValue !== '' && (
+              <View style={styles.heroValueContainer}>
+                <Text style={[styles.heroValue, statusValue === 'Cao' && { fontSize: 50, marginBottom: 10 }]}>{statusValue}</Text>
+                {statusSub !== '' && <Text style={styles.heroSub}>{statusSub}</Text>}
               </View>
-            </View>
-            <View style={styles.cycleFooter}>
-              <Text style={styles.cycleFooterText}>Kỳ tiếp theo dự kiến: <Text style={{fontWeight: '700', color: colors.primaryDark}}>{prediction.predictedStartDate}</Text></Text>
-            </View>
-            
-            {isDelayed && (
-              <Pressable style={styles.delayedAlert} onPress={() => router.push('/ai')}>
-                <MaterialCommunityIcons name="robot-excited" size={24} color="white" />
-                <View style={{flex: 1, marginLeft: 10}}>
-                  <Text style={styles.delayedTitle}>Cảnh báo trễ kinh</Text>
-                  <Text style={styles.delayedDesc}>Bạn đã trễ {delayedDays} ngày. Bấm để AI phân tích nguyên nhân nhé!</Text>
-                </View>
-                <Feather name="chevron-right" size={20} color="white" />
+            )}
+          </LinearGradient>
+          
+          <Pressable style={styles.editPeriodBtn} onPress={() => router.push('/calendar')}>
+            <Text style={styles.editPeriodText}>Sửa kỳ kinh</Text>
+          </Pressable>
+        </View>
+
+        {/* 3. Daily Insights (Horizontal Scroll) */}
+        <View style={styles.insightsSection}>
+          <Text style={styles.sectionTitle}>Thông tin hàng ngày • Hôm nay</Text>
+          
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 15 }}>
+            {/* Ghi triệu chứng */}
+            <Pressable style={[styles.insightCard, { backgroundColor: '#FFF0F3', borderColor: '#FFE4E8' }]} onPress={() => router.push('/log')}>
+              <Text style={styles.insightTitle}>Ghi nhận{'\n'}triệu chứng</Text>
+              <View style={[styles.addIcon, { backgroundColor: '#FF4B72' }]}>
+                <Feather name="plus" size={20} color="white" />
+              </View>
+            </Pressable>
+
+            {/* AI Dự báo */}
+            {prediction?.notes && prediction.notes.length > 0 && (
+              <Pressable style={[styles.insightCard, { backgroundColor: '#F3E5F5', borderColor: '#E1BEE7', minWidth: 160 }]} onPress={() => router.push('/chat')}>
+                <Text style={[styles.insightTitle, { color: '#6A1B9A' }]}>AI dự báo{'\n'}hôm nay</Text>
+                <MaterialCommunityIcons name="robot-outline" size={32} color="#9C27B0" style={{ alignSelf: 'center', marginTop: 10 }} />
+                <Text style={{ fontSize: 11, color: '#6A1B9A', marginTop: 8, textAlign: 'center', opacity: 0.8 }} numberOfLines={3}>
+                  {prediction.notes[0]}
+                </Text>
               </Pressable>
             )}
-            
-            {!isDelayed && prediction.ovulationDate && (
-              <View style={styles.ovulationCard}>
-                <View style={styles.ovulationHeader}>
-                  <MaterialCommunityIcons name="egg-outline" size={20} color="#FF9800" />
-                  <Text style={styles.ovulationTitle}>Cửa sổ thụ thai & Rụng trứng</Text>
-                </View>
-                <Text style={styles.ovulationText}>Khoảng thụ thai cao: <Text style={styles.ovulationBold}>{prediction.fertileWindowStart} đến {prediction.fertileWindowEnd}</Text></Text>
-                <Text style={styles.ovulationText}>Ngày rụng trứng (dự kiến): <Text style={styles.ovulationBold}>{prediction.ovulationDate}</Text></Text>
-              </View>
-            )}
 
-            {prediction.notes && prediction.notes.length > 0 && (
-              <View style={[styles.ovulationCard, { backgroundColor: '#F3E5F5', borderColor: '#E1BEE7', marginTop: 15 }]}>
-                <View style={styles.ovulationHeader}>
-                  <MaterialCommunityIcons name="robot-outline" size={20} color="#9C27B0" />
-                  <Text style={[styles.ovulationTitle, { color: '#8E24AA', flex: 1 }]}>Chẩn Đoán & Lời Khuyên</Text>
-                  <Switch
-                    value={isAiModeEnabled}
-                    onValueChange={(val) => {
-                      if (val) Alert.alert("Bật AI Mode", "Đã bật AI mode giúp chẩn đoán và chăm sóc vợ tốt hơn");
-                      toggleAiMode(val);
-                    }}
-                    trackColor={{ false: '#d1d1d1', true: '#E1BEE7' }}
-                    thumbColor={isAiModeEnabled ? '#9C27B0' : '#f4f3f4'}
-                  />
-                </View>
-                <Text style={{ fontSize: 13, color: '#4A148C', lineHeight: 20 }}>
-                  {prediction.notes[0]}
+            {/* Cycle Day */}
+            {latestEvent && (
+              <View style={[styles.insightCard, { backgroundColor: '#E3F2FD', borderColor: '#BBDEFB' }]}>
+                <Text style={[styles.insightTitle, { color: '#1565C0' }]}>Ngày của{'\n'}chu kỳ</Text>
+                <Text style={{ fontSize: 40, fontWeight: '800', color: '#1976D2', textAlign: 'center', marginTop: 10 }}>
+                  {Math.round((todayTime - new Date(latestEvent.startDate).getTime()) / (1000*60*60*24)) + 1}
                 </Text>
               </View>
             )}
-          </View>
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Feather name="moon" size={40} color={colors.primaryLight} style={{marginBottom: 15}} />
-            <Text style={styles.emptyText}>Chưa đủ dữ liệu để dự đoán. Vui lòng ghi nhận thêm chu kỳ của bạn nhé.</Text>
-          </View>
-        )}
-      </View>
+            
+            {/* AI Mode Toggle */}
+            <View style={[styles.insightCard, { backgroundColor: '#FFF8E1', borderColor: '#FFECB3' }]}>
+              <Text style={[styles.insightTitle, { color: '#F57F17' }]}>Chế độ AI{'\n'}(Thông minh)</Text>
+              <View style={{ alignItems: 'center', marginTop: 15 }}>
+                <Switch
+                  value={isAiModeEnabled}
+                  onValueChange={(val) => {
+                    if (val) Alert.alert("Bật AI Mode", "Đã bật chế độ phân tích nâng cao của AI");
+                    toggleAiMode(val);
+                  }}
+                  trackColor={{ false: '#d1d1d1', true: '#FFCA28' }}
+                  thumbColor={isAiModeEnabled ? '#FF8F00' : '#f4f3f4'}
+                />
+              </View>
+            </View>
 
-      {/* Log Action Button */}
-      <Pressable style={({pressed}) => [styles.primaryButton, pressed && styles.pressed]} onPress={() => router.push('/log')}>
-        <Ionicons name="add-circle" size={24} color="white" style={{marginRight: 8}} />
-        <Text style={styles.primaryButtonText}>Ghi nhận hôm nay</Text>
+          </ScrollView>
+        </View>
+
+      </ScrollView>
+
+      {/* Floating Action Button (Optional) */}
+      <Pressable style={styles.fab} onPress={() => router.push('/log')}>
+        <Ionicons name="add" size={30} color="white" />
       </Pressable>
 
-      <Text style={styles.sectionTitle}>Chăm Sóc & Đồng Hành</Text>
-      <View style={styles.quickActions}>
-        <Pressable style={styles.actionBtn} onPress={() => router.push('/care')}>
-          <View style={[styles.actionIcon, { backgroundColor: '#E8F5E9' }]}>
-            <Feather name="heart" size={24} color="#4CAF50" />
-          </View>
-          <Text style={styles.actionText}>Tự Chăm Sóc</Text>
-        </Pressable>
-        <Pressable style={styles.actionBtn} onPress={() => router.push('/partner')}>
-          <View style={[styles.actionIcon, { backgroundColor: '#FFF3E0' }]}>
-            <MaterialCommunityIcons name="shield-account-outline" size={24} color="#FF9800" />
-          </View>
-          <Text style={styles.actionText}>Cấp Quyền</Text>
-        </Pressable>
-        <Pressable style={styles.actionBtn} onPress={() => router.push('/husband')}>
-          <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-            <FontAwesome5 name="user-tie" size={20} color="#2196F3" />
-          </View>
-          <Text style={styles.actionText}>Góc Cho Chồng</Text>
-        </Pressable>
-        <Pressable style={styles.actionBtn} onPress={() => router.push('/ai')}>
-          <View style={[styles.actionIcon, { backgroundColor: '#F3E5F5' }]}>
-            <MaterialCommunityIcons name="robot-outline" size={24} color="#9C27B0" />
-          </View>
-          <Text style={styles.actionText}>Trợ lý AI</Text>
-        </Pressable>
-      </View>
-
-      <Text style={styles.sectionTitle}>Tương tác Nhanh</Text>
-      
-      {/* Features Grid */}
-      <View style={styles.grid}>
-        <Pressable style={({pressed}) => [styles.gridItem, pressed && styles.pressed]} onPress={() => router.push('/calendar')}>
-          <View style={[styles.iconWrapper, { backgroundColor: '#E8F3F1' }]}>
-            <Feather name="calendar" size={24} color="#4A90E2" />
-          </View>
-          <Text style={styles.gridText}>Lịch</Text>
-        </Pressable>
-        
-        <Pressable style={({pressed}) => [styles.gridItem, pressed && styles.pressed]} onPress={() => router.push('/insights')}>
-          <View style={[styles.iconWrapper, { backgroundColor: '#F9F0FF' }]}>
-            <Feather name="pie-chart" size={24} color="#9D8DF1" />
-          </View>
-          <Text style={styles.gridText}>Phân tích</Text>
-        </Pressable>
-
-        <Pressable style={({pressed}) => [styles.gridItem, pressed && styles.pressed]} onPress={() => router.push('/history')}>
-          <View style={[styles.iconWrapper, { backgroundColor: '#FFF5E6' }]}>
-            <Feather name="clock" size={24} color="#FF9F43" />
-          </View>
-          <Text style={styles.gridText}>Lịch sử</Text>
-        </Pressable>
-
-        <Pressable style={({pressed}) => [styles.gridItem, pressed && styles.pressed]} onPress={() => router.push('/reports')}>
-          <View style={[styles.iconWrapper, { backgroundColor: '#E6FAFC' }]}>
-            <Feather name="file-text" size={24} color="#00CFE8" />
-          </View>
-          <Text style={styles.gridText}>Báo cáo</Text>
-        </Pressable>
-
-        <Pressable style={({pressed}) => [styles.gridItem, pressed && styles.pressed]} onPress={() => router.push('/settings')}>
-          <View style={[styles.iconWrapper, { backgroundColor: '#F4F5F7' }]}>
-            <Feather name="settings" size={24} color="#6B7280" />
-          </View>
-          <Text style={styles.gridText}>Cài đặt</Text>
-        </Pressable>
-
-        <Pressable style={({pressed}) => [styles.gridItem, pressed && styles.pressed]} onPress={() => alert('Tính năng Cẩm Nang Kiến Thức đang được phát triển!')}>
-          <View style={[styles.iconWrapper, { backgroundColor: '#E8F5E9' }]}>
-            <Feather name="book-open" size={24} color="#4CAF50" />
-          </View>
-          <Text style={styles.gridText}>Kiến thức</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+      {/* 4. Bottom Tab Bar */}
+      <BottomNavBar />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 24 },
-  
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 50, marginBottom: 30 },
-  greeting: { fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: 4, letterSpacing: -0.5 },
-  subGreeting: { fontSize: 16, color: colors.textMuted, fontWeight: '500' },
-  profileAvatar: { width: 45, height: 45, borderRadius: 22.5, backgroundColor: colors.primaryLight, justifyContent: 'center', alignItems: 'center' },
-  
-  mainCard: { 
-    backgroundColor: colors.card, 
-    borderRadius: 32, 
-    padding: 24, 
-    marginBottom: 30, 
-    boxShadow: '0px 12px 24px rgba(255, 141, 161, 0.12)'
-  },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  cardTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
-  iconButton: { padding: 8, backgroundColor: colors.background, borderRadius: 20 },
+  topAppBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 10 },
+  profileBtn: { padding: 4 },
+  avatarMock: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8F3F1', justifyContent: 'center', alignItems: 'center' },
+  appTitle: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
+  notiBtn: { padding: 4 },
 
-  quickActions: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30, flexWrap: 'wrap' },
-  actionBtn: { alignItems: 'center', width: '23%' },
-  actionIcon: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  actionText: { fontSize: 12, fontWeight: '600', color: colors.text, textAlign: 'center' },
-  
-  circleContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
-  largeCircle: {
-    width: 240, height: 240,
-    borderRadius: 120,
-    backgroundColor: '#FFF0F3',
-    justifyContent: 'center', alignItems: 'center',
-    boxShadow: '0px 8px 16px rgba(255, 141, 161, 0.2)'
-  },
-  innerCircle: {
-    width: 180, height: 180,
-    borderRadius: 90,
-    backgroundColor: colors.card,
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: colors.primaryLight + '50'
-  },
-  daysNumber: { fontSize: 56, fontWeight: '800', color: colors.primaryDark, includeFontPadding: false },
-  daysText: { fontSize: 15, color: colors.textMuted, fontWeight: '600', marginTop: -5 },
-  
-  cycleFooter: { backgroundColor: colors.background, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  cycleFooterText: { fontSize: 13, color: colors.textMuted },
-  
-  delayedAlert: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F44336', padding: 15, borderRadius: 16, marginTop: 20, width: '100%', boxShadow: '0px 4px 12px rgba(244, 67, 54, 0.3)' },
-  delayedTitle: { color: 'white', fontWeight: '800', fontSize: 15, marginBottom: 2 },
-  delayedDesc: { color: 'white', opacity: 0.9, fontSize: 13, lineHeight: 18 },
+  weekCalendarContainer: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: colors.border },
+  monthHeader: { textAlign: 'center', fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 15 },
+  weekRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20 },
+  dayCol: { alignItems: 'center', width: 40 },
+  dayName: { fontSize: 12, color: colors.textMuted, marginBottom: 8, fontWeight: '500' },
+  dayCircle: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  dayCircleToday: { borderWidth: 2, borderColor: colors.primary, backgroundColor: colors.background },
+  dayDate: { fontSize: 16, color: colors.text, fontWeight: '500' },
 
-  ovulationCard: { backgroundColor: '#FFF8E1', padding: 16, borderRadius: 16, marginTop: 20, width: '100%', borderWidth: 1, borderColor: '#FFE082' },
-  ovulationHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  ovulationTitle: { fontSize: 14, fontWeight: '700', color: '#FF9800', marginLeft: 8 },
-  ovulationText: { fontSize: 13, color: '#5D4037', marginBottom: 4 },
-  ovulationBold: { fontWeight: '700', color: '#E65100' },
-
-  emptyContainer: { alignItems: 'center', paddingVertical: 30 },
-  emptyText: { color: colors.textMuted, textAlign: 'center', lineHeight: 22, paddingHorizontal: 20 },
-  
-  primaryButton: { 
-    flexDirection: 'row',
-    backgroundColor: colors.primary, 
-    paddingVertical: 18, 
-    borderRadius: 24, 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    marginBottom: 35,
-    boxShadow: '0px 8px 20px rgba(255, 141, 161, 0.35)'
-  },
-  primaryButtonText: { color: 'white', fontWeight: 'bold', fontSize: 17, letterSpacing: 0.3 },
-  
-  sectionTitle: { fontSize: 20, fontWeight: '800', color: colors.text, marginBottom: 20, letterSpacing: -0.5 },
-  
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  gridItem: { 
-    width: '31%', 
-    backgroundColor: colors.card, 
-    paddingVertical: 20,
-    paddingHorizontal: 10,
-    borderRadius: 24, 
-    marginBottom: 16, 
-    alignItems: 'center',
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.04)'
-  },
-  iconWrapper: {
-    width: 50, height: 50,
-    borderRadius: 25,
+  heroSection: { alignItems: 'center', paddingVertical: 40 },
+  heroCircle: { 
+    width: 280, height: 280, borderRadius: 140, 
     justifyContent: 'center', alignItems: 'center',
-    marginBottom: 12
+    shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10
   },
-  gridText: { fontSize: 13, fontWeight: '600', color: colors.text, textAlign: 'center' },
+  heroTitle: { color: 'white', fontSize: 18, fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.1)', textShadowOffset: {width: 0, height: 1}, textShadowRadius: 2 },
+  heroValueContainer: { alignItems: 'center', marginTop: 10 },
+  heroValue: { color: 'white', fontSize: 72, fontWeight: '800', lineHeight: 80, textShadowColor: 'rgba(0,0,0,0.15)', textShadowOffset: {width: 0, height: 2}, textShadowRadius: 4 },
+  heroSub: { color: 'white', fontSize: 18, fontWeight: '600', marginTop: -5, opacity: 0.9 },
   
-  pressed: { transform: [{ scale: 0.96 }], opacity: 0.9 }
+  editPeriodBtn: { 
+    marginTop: -20, backgroundColor: 'white', paddingHorizontal: 24, paddingVertical: 12, 
+    borderRadius: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 5, zIndex: 10 
+  },
+  editPeriodText: { color: colors.primary, fontWeight: '700', fontSize: 16 },
+
+  insightsSection: { marginTop: 10, paddingBottom: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text, paddingHorizontal: 20, marginBottom: 15 },
+  insightCard: { 
+    width: 140, minHeight: 160, borderRadius: 20, padding: 15, borderWidth: 1,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2
+  },
+  insightTitle: { fontSize: 16, fontWeight: '700', color: colors.text, lineHeight: 22 },
+  addIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginTop: 'auto' },
+
+  fab: { 
+    position: 'absolute', bottom: 100, right: 20, width: 60, height: 60, borderRadius: 30, 
+    backgroundColor: '#00B8D4', justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#00B8D4', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 8, zIndex: 50
+  },
+
+  bottomNavContainer: { 
+    position: 'absolute', bottom: 0, left: 0, right: 0, 
+    height: 85, backgroundColor: 'white', 
+    flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', 
+    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+    borderTopWidth: 1, borderTopColor: colors.border,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 15
+  },
+  navItem: { alignItems: 'center', justifyContent: 'center', width: 65 },
+  navText: { fontSize: 11, color: colors.textMuted, marginTop: 4, fontWeight: '600' }
 });
