@@ -12,6 +12,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
 
+        {/* Load Barlow font from Google Fonts */}
+        <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@1,200;1,300;1,400&display=swap" rel="stylesheet" />
+
         {/* Cấu hình SEO và Social Preview (Open Graph) */}
         <title>LunaCare - Yêu Thương & Thấu Hiểu</title>
         <meta name="description" content="LunaCare là ứng dụng AI thông minh giúp theo dõi chu kỳ, chăm sóc sức khỏe sinh sản và gắn kết tình cảm vợ chồng." />

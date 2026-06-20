@@ -85,10 +85,11 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   tagline: {
-    fontSize: 24,
+    fontSize: 26,
     color: '#D81B60',
+    fontFamily: '"Barlow", sans-serif',
     fontStyle: 'italic',
-    fontWeight: '700',
-    letterSpacing: 0.8,
+    fontWeight: '300',
+    letterSpacing: 1.2,
   }
 });
