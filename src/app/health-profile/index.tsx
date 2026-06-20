@@ -46,15 +46,9 @@ export default function HealthProfileScreen() {
       }
     });
 
-    // 2. Lưu lên Supabase
+    // 2. Lưu lên Supabase đúng chuẩn (gói gọn cả appSettings và periodEvents)
     if (profileStore.profile?.uid) {
-      supabase
-        .from('profiles')
-        .update({ health_profile: answers })
-        .eq('id', profileStore.profile.uid)
-        .then(({ error }) => {
-          if (error) console.error("Lỗi đồng bộ hồ sơ:", error);
-        });
+      profileStore.saveProfileToSupabase(useCycleStore.getState().periodEvents);
     }
 
     if (Platform.OS === 'web') {
