@@ -35,18 +35,26 @@ export default function ScanQR() {
         wifeId = data.replace('LUNA_CONNECT_', '');
       }
       
-      // Ở đây chúng ta sẽ lưu thông tin Husband vào DB và Store
+      const currentProfile = useProfileStore.getState().profile;
+      
+      if (!currentProfile?.uid || currentProfile.uid.startsWith('temp_')) {
+        alert('Vui lòng đăng nhập để kết nối với Vợ!');
+        router.replace('/auth/login?role=husband');
+        return;
+      }
+
+      // Lưu liên kết vào Profile của Chồng
       setProfile({
-        uid: 'husband_device_' + Math.floor(Math.random() * 10000), // Mock ID cho chồng
-        role: 'husband',
+        ...currentProfile,
         connectedWifeId: wifeId,
-        displayName: 'Chồng Yêu',
-        onboardingCompleted: true,
-        healthProfile: null
+        onboardingCompleted: true
       });
 
+      // TODO: Ở đây sẽ gọi thêm API (nếu có bảng partner_links) để lưu vào Database.
+      // Tạm thời lưu thẳng vào profile của Chồng.
+
       // Chuyển sang Giao diện Độc quyền cho Đàn ông
-      router.replace('/husband');
+      router.replace('/husband-dashboard');
     } else {
       alert('Mã QR không hợp lệ!');
       setTimeout(() => setScanned(false), 2000);

@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, Pressable, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { colors } from '../../theme/colors';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
@@ -9,6 +9,10 @@ import { supabase } from '../../lib/supabase';
 
 export default function LoginWife() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const role = params.role as string || 'wife';
+  const isHusband = role === 'husband';
+
   const setProfile = useProfileStore(state => state.setProfile);
   
   const [email, setEmail] = useState('');
@@ -26,9 +30,20 @@ export default function LoginWife() {
       if (isRegistering) {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        // Bắt ép vào thẳng Onboarding 20 câu hỏi sau khi đăng ký
-        setProfile({ uid: data.user?.id || 'temp_wife_id', displayName: email.split('@')[0], onboardingCompleted: false, healthProfile: null, role: 'wife' });
-        router.replace('/onboarding');
+        
+        setProfile({ 
+          uid: data.user?.id || 'temp_id', 
+          displayName: email.split('@')[0], 
+          onboardingCompleted: false, 
+          healthProfile: null, 
+          role: role 
+        });
+
+        if (isHusband) {
+          router.replace('/auth/scan-qr');
+        } else {
+          router.replace('/onboarding');
+        }
       } else {
         const { error, data } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -48,7 +63,7 @@ export default function LoginWife() {
           displayName: profileData?.display_name || email.split('@')[0], 
           onboardingCompleted: isOnboarded, 
           healthProfile: allUserData.healthProfile || null, 
-          role: 'wife',
+          role: role,
           isAppLockEnabled: allUserData.appSettings?.isAppLockEnabled,
           appLockPin: allUserData.appSettings?.appLockPin,
           hideNotifications: allUserData.appSettings?.hideNotifications,
@@ -58,7 +73,9 @@ export default function LoginWife() {
           useCycleStore.getState().setPeriodEvents(allUserData.periodEvents, true);
         }
 
-        if (isOnboarded) {
+        if (isHusband) {
+          router.replace('/auth/scan-qr');
+        } else if (isOnboarded) {
           router.replace('/home');
         } else {
           router.replace('/onboarding');
@@ -79,7 +96,7 @@ export default function LoginWife() {
 
       <View style={{ flex: 1, justifyContent: 'center' }}>
         <Text style={styles.title}>{isRegistering ? 'Đăng ký' : 'Chào mừng trở lại'}</Text>
-        <Text style={styles.subtitle}>Dành riêng cho phái đẹp</Text>
+        <Text style={styles.subtitle}>{isHusband ? 'Tài khoản Đồng hành (Chồng)' : 'Dành riêng cho phái đẹp'}</Text>
 
         <View style={styles.form}>
           <TextInput

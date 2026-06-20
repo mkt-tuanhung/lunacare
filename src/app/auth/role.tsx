@@ -39,14 +39,14 @@ export default function RoleSelection() {
         {/* Nút Người Chồng */}
         <Pressable 
           style={[styles.card, { backgroundColor: '#E3F2FD', borderColor: '#2196F3' }]}
-          onPress={() => router.push('/auth/scan-qr')}
+          onPress={() => router.push({ pathname: '/auth/login', params: { role: 'husband' } })}
         >
           <View style={[styles.iconBox, { backgroundColor: '#2196F3' }]}>
             <FontAwesome5 name="male" size={30} color="white" />
           </View>
           <View style={styles.cardTextContainer}>
             <Text style={[styles.cardTitle, { color: '#0D47A1' }]}>Tôi là Chồng</Text>
-            <Text style={styles.cardDesc}>Quét mã QR để kết nối & chăm sóc vợ yêu</Text>
+            <Text style={styles.cardDesc}>Tạo tài khoản & Quét mã QR để kết nối chăm sóc vợ yêu</Text>
           </View>
           <Feather name="chevron-right" size={24} color="#2196F3" />
         </Pressable>
