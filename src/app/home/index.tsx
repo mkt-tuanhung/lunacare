@@ -253,7 +253,7 @@ export default function Home() {
               <View style={styles.avatarMock}><Text style={{fontSize: 20}}>👱‍♀️</Text></View>
             )}
           </Pressable>
-          <Image source={require('../../assets/images/logo.png')} style={styles.appLogo} resizeMode="contain" />
+          <Image source={require('../../assets/images/iump_decor.png')} style={styles.appLogo} resizeMode="contain" />
           <Pressable style={styles.notiBtn}>
             <Feather name="bell" size={24} color={colors.text} />
           </Pressable>
