@@ -87,58 +87,49 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
     }
   }
 
-  if (!sorted.length) {
-    // NẾU CHƯA CÓ LỊCH SỬ NÀO -> Dự đoán hoàn toàn dựa trên dữ liệu nhập lúc Onboarding
+  if (sorted.length < 2) {
+    // CHƯA ĐỦ DỮ LIỆU LỊCH SỬ (Dưới 2 chu kỳ -> không tính được cycle length)
     if (healthProfile?.lastPeriodDate && healthProfile?.cycleLength) {
-      
-      let baseCycleLength = parseInt(String(healthProfile.cycleLength)) || 28;
-      let periodDuration = parseInt(String(healthProfile.periodDuration)) || 5;
-      
-      // AI Adjustments: Thu hẹp lại để không làm sai lệch quá mức (Tránh ảo giác)
-      if (healthProfile.stressLevel === 'Rất cao') baseCycleLength += 2;
-      if (healthProfile.contraceptionMethod === 'Thuốc tránh thai khẩn cấp') baseCycleLength += 3;
-      if (healthProfile.recentPregnancy === 'Mới sinh con' || healthProfile.recentPregnancy === 'Mới sẩy thai/phá thai') baseCycleLength += 5;
-      
-      if (baseCycleLength > 60) baseCycleLength = 60;
-      if (baseCycleLength < 20) baseCycleLength = 20;
+      let predictedCycleLength = parseInt(String(healthProfile.cycleLength)) || 28;
+      let predictedPeriodLength = parseInt(String(healthProfile.periodDuration)) || 5;
 
-      let pStartDate = addDays(healthProfile.lastPeriodDate, baseCycleLength);
+      let pStartDate = addDays(healthProfile.lastPeriodDate, predictedCycleLength);
       
       const today = new Date();
       today.setHours(0,0,0,0);
       let loopCount = 0;
       while (new Date(pStartDate).getTime() < today.getTime() && loopCount < 100) { 
-          pStartDate = addDays(pStartDate, baseCycleLength);
+          pStartDate = addDays(pStartDate, predictedCycleLength);
           loopCount++;
       }
       
-      const diffDaysAfterLoop = (new Date(pStartDate).getTime() - today.getTime()) / DAY_MS;
-      if (diffDaysAfterLoop > 60) {
-          pStartDate = addDays(today.toISOString().slice(0, 10), 0);
-      }
+      const pEndDate = addDays(pStartDate, predictedPeriodLength - 1);
       
-      const pEndDate = addDays(pStartDate, periodDuration - 1);
+      // Theo PRD 9.2:
+      // Ovulation date = next period start - 14 ngày.
+      const ovDate = addDays(pStartDate, -14); 
       
-      // Tính Luteal Phase chuẩn Y khoa (Thường là 14 ngày, chu kỳ ngắn thì 12, dài thì 16)
-      let lutealPhase = 14;
-      if (baseCycleLength <= 24) lutealPhase = 12;
-      else if (baseCycleLength >= 35) lutealPhase = 16;
+      // Fertile window = ovulation date - 5 ngày đến ovulation date + 1 ngày.
+      const fertileStart = addDays(ovDate, -5);
+      const fertileEnd = addDays(ovDate, 1);
       
-      const ovDate = addDays(pStartDate, -lutealPhase); 
+      // PMS window = next period start - 7 ngày đến next period start - 1 ngày.
+      const pmsStart = addDays(pStartDate, -7);
+      const pmsEnd = addDays(pStartDate, -1);
       
       return {
         predictedStartDate: pStartDate,
         predictedEndDate: pEndDate,
-        predictedCycleLength: baseCycleLength,
-        predictedPeriodLength: periodDuration,
+        predictedCycleLength,
+        predictedPeriodLength,
         ovulationDate: ovDate,
-        fertileWindowStart: addDays(ovDate, -5),
-        fertileWindowEnd: addDays(ovDate, 1),
-        pmsWindowStart: addDays(pStartDate, -7),
-        pmsWindowEnd: addDays(pStartDate, -1),
-        confidence: "medium",
-        confidenceScore: 70,
-        notes: dailyAdvice.length > 0 ? [...dailyAdvice] : ["Dự đoán dựa trên hồ sơ sức khoẻ ban đầu của bạn."]
+        fertileWindowStart: fertileStart,
+        fertileWindowEnd: fertileEnd,
+        pmsWindowStart: pmsStart,
+        pmsWindowEnd: pmsEnd,
+        confidence: "low",
+        confidenceScore: 30, // Dưới 3 chu kỳ -> Low
+        notes: dailyAdvice.length > 0 ? [...dailyAdvice] : ["Dự đoán dựa trên dữ liệu khai báo ban đầu."]
       };
     }
 
@@ -149,69 +140,55 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
     };
   }
 
-  // CÓ LỊCH SỬ CHU KỲ
+  // PRD 9.1:
+  // 1. Lấy lịch sử kỳ kinh. (Đã lấy ở trên)
+  // 2. Tính độ dài từng chu kỳ.
   let rawCycleLengths = [];
   for (let i = 1; i < sorted.length; i++) {
     rawCycleLengths.push(daysBetween(sorted[i - 1].startDate, sorted[i].startDate));
   }
   
+  // 3. Loại outlier.
   const cleanCycleLengths = filterOutliers(rawCycleLengths);
   
-  // NẾU USER CÓ CHỈNH SỬA CHU KỲ TRONG CÀI ĐẶT: 
-  // Kết hợp giữa trung bình lịch sử và cấu hình của user để ra dự đoán chính xác nhất
-  let userSetCycle = parseInt(String(healthProfile?.cycleLength)) || 28;
-  let historyCycle = cleanCycleLengths.length > 0 ? weightedAverage(cleanCycleLengths) : userSetCycle;
-  
-  // Tỷ lệ: Nếu chỉ có 1-2 lịch sử -> Tin vào user set 70%, lịch sử 30%
-  // Nếu có >= 3 lịch sử -> Tin vào lịch sử 80%, user 20%
-  let predictedCycleLength = historyCycle;
-  if (cleanCycleLengths.length < 3) {
-      predictedCycleLength = Math.round(historyCycle * 0.3 + userSetCycle * 0.7);
-  } else {
-      predictedCycleLength = Math.round(historyCycle * 0.8 + userSetCycle * 0.2);
-  }
-  
-  let modifierNotes = [];
-  if (healthProfile) {
-    if (healthProfile.stressLevel === 'Rất cao') predictedCycleLength += 2;
-    if (healthProfile.birthControl === 'Thuốc hàng ngày') predictedCycleLength = 28;
-  }
-
+  // 4. Dùng weighted average, chu kỳ gần nhất có trọng số cao hơn.
+  let predictedCycleLength = cleanCycleLengths.length > 0 
+    ? weightedAverage(cleanCycleLengths) 
+    : (parseInt(String(healthProfile?.cycleLength)) || 28);
+    
+  // Tính độ dài ngày hành kinh trung bình
   const periodLengths = sorted.filter(c => c.endDate).map(c => daysBetween(c.startDate, c.endDate as string) + 1);
-  let userSetPeriod = parseInt(String(healthProfile?.periodDuration)) || 5;
-  const predictedPeriodLength = periodLengths.length > 0 ? Math.round(weightedAverage(periodLengths) * 0.8 + userSetPeriod * 0.2) : userSetPeriod;
+  const predictedPeriodLength = periodLengths.length > 0 ? weightedAverage(periodLengths) : (parseInt(String(healthProfile?.periodDuration)) || 5);
 
   const lastCycle = sorted[sorted.length - 1];
+  
+  // PRD 9.2: Next period start = last period start + predicted cycle length.
   let predictedStartDate = addDays(lastCycle.startDate, predictedCycleLength);
   
+  // Nếu ngày dự đoán nằm trong quá khứ, chạy loop để lấy chu kỳ tiếp theo trong tương lai
   const today = new Date();
   today.setHours(0,0,0,0);
-  
   let loopCount = 0;
   while (new Date(predictedStartDate).getTime() < today.getTime() && loopCount < 100) { 
       predictedStartDate = addDays(predictedStartDate, predictedCycleLength);
       loopCount++;
   }
-  
-  const diffDaysAfterLoop = (new Date(predictedStartDate).getTime() - today.getTime()) / DAY_MS;
-  if (diffDaysAfterLoop > 60) {
-      predictedStartDate = addDays(today.toISOString().slice(0, 10), 0);
-  }
 
   const predictedEndDate = addDays(predictedStartDate, predictedPeriodLength - 1);
 
-  // Tính Luteal Phase động thay vì fix cứng 14 ngày
-  let lutealPhase = 14;
-  if (predictedCycleLength <= 24) lutealPhase = 12;
-  else if (predictedCycleLength >= 35) lutealPhase = 16;
-
-  const ovulationDate = addDays(predictedStartDate, -lutealPhase);
+  // PRD 9.2: Ovulation date ≈ next period start - 14 ngày.
+  const ovulationDate = addDays(predictedStartDate, -14);
+  
+  // PRD 9.2: Fertile window = ovulation date - 5 ngày đến ovulation date + 1 ngày.
   const fertileWindowStart = addDays(ovulationDate, -5);
   const fertileWindowEnd = addDays(ovulationDate, 1);
+  
+  // PRD 9.2: PMS window = next period start - 7 ngày đến next period start - 1 ngày.
   const pmsWindowStart = addDays(predictedStartDate, -7);
   const pmsWindowEnd = addDays(predictedStartDate, -1);
 
-  // 5. Tính toán Confidence Score dựa theo LunaCare.md (Mục 9.3)
+  // PRD 9.3: Confidence
+  // 5. Tính độ biến động.
   let fluctuation = 0;
   if (cleanCycleLengths.length >= 2) {
     const max = Math.max(...cleanCycleLengths);
@@ -221,15 +198,16 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
 
   let confidence: 'low' | 'medium' | 'high' = 'low';
   let confidenceScore = 40;
+  let modifierNotes = [];
 
   if (sorted.length < 3) {
     confidence = 'low';
     confidenceScore = 30;
-    modifierNotes.push("Dự đoán có độ tin cậy thấp do chưa đủ dữ liệu 3 chu kỳ.");
+    modifierNotes.push("Dự đoán có độ tin cậy thấp do có dưới 3 chu kỳ.");
   } else if (fluctuation > 9) {
     confidence = 'low';
     confidenceScore = 40;
-    modifierNotes.push("Chu kỳ của bạn biến động khá lớn (>9 ngày), độ tin cậy dự đoán thấp.");
+    modifierNotes.push("Chu kỳ của bạn biến động lớn (>9 ngày), độ tin cậy thấp.");
   } else if (fluctuation >= 4 && fluctuation <= 9) {
     confidence = 'medium';
     confidenceScore = 65;
@@ -238,12 +216,12 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
     confidenceScore = 90;
   }
 
-  // Tăng confidence Rụng trứng nếu có dấu hiệu LH/BBT
+  // Tăng confidence rụng trứng nếu có dữ liệu LH/BBT
   const hasOvulationSigns = recentLogs.some(log => log.ovulation_signs && log.ovulation_signs.length > 0);
   if (hasOvulationSigns) {
     confidenceScore = Math.min(100, confidenceScore + 10);
     if (confidence === 'low' && confidenceScore >= 50) confidence = 'medium';
-    modifierNotes.push("Dự đoán ngày rụng trứng chính xác hơn nhờ các dấu hiệu nhận biết rụng trứng của bạn.");
+    modifierNotes.push("Dự đoán ngày rụng trứng chính xác hơn nhờ dữ liệu nhận biết rụng trứng.");
   }
 
   // Tăng confidence PMS nếu có nhiều log triệu chứng
@@ -251,10 +229,8 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
   if (hasManySymptoms) {
     confidenceScore = Math.min(100, confidenceScore + 5);
     if (confidence === 'low' && confidenceScore >= 50) confidence = 'medium';
-    modifierNotes.push("Dự đoán hội chứng tiền kinh nguyệt (PMS) đáng tin cậy hơn nhờ dữ liệu triệu chứng của bạn.");
   }
 
-  // Đưa lời khuyên hàng ngày lên đầu ghi chú
   if (dailyAdvice.length > 0) {
     modifierNotes = [...dailyAdvice, ...modifierNotes];
   }
@@ -271,6 +247,6 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
     pmsWindowEnd,
     confidence,
     confidenceScore,
-    notes: modifierNotes.length > 0 ? modifierNotes : ["Dự đoán hoạt động ổn định."]
+    notes: modifierNotes.length > 0 ? modifierNotes : ["Dự đoán hoạt động dựa trên lịch sử của bạn."]
   };
 }
