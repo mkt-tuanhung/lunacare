@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // Lấy config từ biến môi trường (cần setup trong .env)
 const R2_ACCESS_KEY_ID = process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID || '';
@@ -31,16 +32,29 @@ export const uploadAvatarToR2 = async (fileUri: string, userId: string): Promise
     const ext = fileUri.split('.').pop() || 'jpg';
     const fileName = `avatars/${userId}-${Date.now()}.${ext}`;
 
-    // 3. Upload lên R2
+    // 3. Tạo command
     const command = new PutObjectCommand({
       Bucket: R2_BUCKET,
       Key: fileName,
-      Body: blob,
       ContentType: blob.type || 'image/jpeg',
       ACL: 'public-read', // R2 hỗ trợ ACL
     });
 
-    await s3Client.send(command);
+    // 4. Lấy Presigned URL (để RN upload native qua fetch, không qua aws-sdk bị lỗi)
+    const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+
+    // 5. Upload trực tiếp qua URL vừa ký
+    const uploadRes = await fetch(presignedUrl, {
+      method: 'PUT',
+      body: blob,
+      headers: {
+        'Content-Type': blob.type || 'image/jpeg'
+      }
+    });
+
+    if (!uploadRes.ok) {
+      throw new Error(`Upload failed with status: ${uploadRes.status}`);
+    }
 
     // 4. Trả về URL
     if (R2_PUBLIC_URL) {

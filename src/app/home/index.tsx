@@ -8,6 +8,7 @@ import { Feather, Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/v
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadAvatarToR2 } from '../../lib/r2';
+import { scheduleSleepProtection, scheduleSmartGrocery } from '../../lib/notifications';
 
 const { width } = Dimensions.get('window');
 
@@ -174,6 +175,12 @@ export default function Home() {
       const start = new Date(prediction.predictedStartDate).getTime();
       const diff = (start - new Date().getTime()) / (1000 * 60 * 60 * 24);
       if (diff > 55 || diff < -55) calculatePrediction();
+
+      // Lên lịch thông báo tự động (Background AI)
+      if (diff > 0 && diff <= 3) {
+        scheduleSleepProtection();
+        scheduleSmartGrocery();
+      }
     }
   }, [prediction?.predictedStartDate]);
 
@@ -332,6 +339,34 @@ export default function Home() {
           </Pressable>
         </View>
 
+        {/* MỚI: Action Center (Trung tâm theo dõi AI) */}
+        {isAiModeEnabled && prediction && (
+          <View style={styles.actionCenter}>
+            <Text style={styles.sectionTitle}>Trung tâm Thông báo & Tự động hoá</Text>
+            
+            <View style={styles.actionCard}>
+              <MaterialCommunityIcons name="shield-check" size={24} color="#4CAF50" />
+              <View style={{flex: 1, marginLeft: 12}}>
+                <Text style={{fontWeight: '700', color: colors.text, fontSize: 15}}>Bảo vệ quyền riêng tư</Text>
+                <Text style={{color: colors.textMuted, fontSize: 13, marginTop: 2}}>Đã bật Mã hoá E2E & Panic PIN (Mã giả)</Text>
+              </View>
+            </View>
+
+            <View style={styles.actionCard}>
+              <MaterialCommunityIcons name="clock-fast" size={24} color="#2196F3" />
+              <View style={{flex: 1, marginLeft: 12}}>
+                <Text style={{fontWeight: '700', color: colors.text, fontSize: 15}}>Theo dõi Sức khoẻ tự động</Text>
+                <Text style={{color: colors.textMuted, fontSize: 13, marginTop: 2}}>
+                  {prediction.predictedStartDate && ((new Date(prediction.predictedStartDate).getTime() - todayTime) / (1000 * 60 * 60 * 24)) <= 3 
+                    ? "Đã hẹn giờ báo thức nhắc đi ngủ (22:30) và nhắc đi siêu thị." 
+                    : "Hệ thống đang âm thầm ghi nhận dữ liệu để đưa ra dự báo tiếp theo."}
+                </Text>
+              </View>
+            </View>
+
+          </View>
+        )}
+
         {/* 3. Daily Insights (Horizontal Scroll) */}
         <View style={styles.insightsSection}>
           <Text style={styles.sectionTitle}>Thông tin hàng ngày • Hôm nay</Text>
@@ -472,5 +507,8 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 15
   },
   navItem: { alignItems: 'center', justifyContent: 'center', width: 65 },
-  navText: { fontSize: 11, color: colors.textMuted, marginTop: 4, fontWeight: '600' }
+  navText: { fontSize: 11, color: colors.textMuted, marginTop: 4, fontWeight: '600' },
+
+  actionCenter: { paddingHorizontal: 20, marginBottom: 20 },
+  actionCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, padding: 15, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.border }
 });

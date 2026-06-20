@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { uploadAvatarToR2 } from '../../lib/r2';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useCycleStore } from '../../store/useCycleStore';
+import { useToastStore } from '../../store/useToastStore';
 
 const moods = [
   { label: 'Vui vẻ', icon: 'smile' },
@@ -170,6 +171,8 @@ export default function LogToday() {
 
       await cycleStore.calculatePrediction();
       
+      useToastStore.getState().showToast("Đã lưu nhật ký thành công!", "success");
+
       if (router.canGoBack()) {
         router.back();
       } else {
@@ -178,9 +181,9 @@ export default function LogToday() {
     } catch (err: any) {
       console.error(err);
       if (err.message && err.message.includes('schema cache')) {
-        alert("Lỗi Bảng Dữ Liệu Supabase: Bảng daily_logs của bạn đang bị thiếu cột.\n\nVui lòng mở file fix_daily_logs.sql và chạy trong Supabase SQL Editor!");
+        useToastStore.getState().showToast("Lỗi cấu trúc Database. Hãy chạy file SQL setup.", "error");
       } else {
-        alert('Lỗi lưu dữ liệu: ' + err.message);
+        useToastStore.getState().showToast('Lỗi lưu dữ liệu: ' + err.message, "error");
       }
     }
   };
@@ -218,7 +221,7 @@ export default function LogToday() {
       setEnergyScore(1);
       setSelectedSymptoms(prev => [...new Set([...prev, 'Đau bụng', 'Mệt mỏi'])]);
       setNotes(prev => prev + (prev ? '\n' : '') + 'Cảm thấy rất đau bụng và thèm đồ ngọt (Tạo tự động từ Voice Log)');
-      Alert.alert('AI Voice Log', 'Đã ghi nhận: "Hôm nay đau bụng 7 điểm, mệt mỏi, thèm ngọt"');
+      useToastStore.getState().showToast('Đã ghi nhận: "Hôm nay đau bụng 7 điểm, mệt mỏi, thèm ngọt"', "success");
     }, 3000);
   };
 
@@ -237,13 +240,14 @@ export default function LogToday() {
         const uploadedUrl = await uploadAvatarToR2(uri, `log_${Date.now()}`);
         if (uploadedUrl) {
           setPhotoUrl(uploadedUrl);
+          useToastStore.getState().showToast("Tải ảnh lên thành công!", "success");
         } else {
-          Alert.alert("Lỗi", "Không thể upload ảnh lên Cloudflare R2 lúc này.");
+          useToastStore.getState().showToast("Lỗi: Cloudflare R2 chặn tải lên do thiếu CORS hoặc sai API Key.", "error");
         }
       }
     } catch (error) {
       console.error(error);
-      Alert.alert("Lỗi", "Có lỗi xảy ra khi chọn ảnh.");
+      useToastStore.getState().showToast("Có lỗi xảy ra khi chọn ảnh.", "error");
     } finally {
       setIsUploadingPhoto(false);
     }

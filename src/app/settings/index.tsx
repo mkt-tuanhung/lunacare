@@ -7,7 +7,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useCycleStore } from '../../store/useCycleStore';
+import { useToastStore } from '../../store/useToastStore';
 import PinPad from '../../components/PinPad';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadAvatarToR2 } from '../../lib/r2';
 
 export default function Settings() {
   const router = useRouter();
@@ -92,6 +95,32 @@ export default function Settings() {
           { text: "Đăng xuất", style: "destructive", onPress: doLogout }
         ]
       );
+    }
+  };
+
+  const handlePickAvatar = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        useToastStore.getState().showToast("Đang tải ảnh lên Cloudflare R2...", "info");
+        const uri = result.assets[0].uri;
+        const uploadedUrl = await uploadAvatarToR2(uri, profileStore.profile?.uid || 'guest');
+        if (uploadedUrl) {
+          profileStore.updateAvatar(uploadedUrl);
+          useToastStore.getState().showToast("Cập nhật ảnh đại diện thành công!", "success");
+        } else {
+          useToastStore.getState().showToast("Lỗi: Cloudflare R2 chặn tải lên do thiếu CORS hoặc sai API Key.", "error");
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      useToastStore.getState().showToast("Có lỗi xảy ra khi chọn ảnh.", "error");
     }
   };
 

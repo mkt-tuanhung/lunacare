@@ -6,6 +6,7 @@ import { View, Text, AppState, StyleSheet, Pressable, Modal } from 'react-native
 import CustomSplash from '../components/CustomSplash';
 import PinPad from '../components/PinPad';
 import FakeNotesApp from '../components/FakeNotesApp';
+import ToastNotification from '../components/ToastNotification';
 import { Feather } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
@@ -110,20 +111,23 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="auth/role" />
-      <Stack.Screen name="auth/login" />
-      <Stack.Screen name="auth/scan-qr" />
-      <Stack.Screen name="onboarding/index" />
-      <Stack.Screen name="home/index" />
-      <Stack.Screen name="calendar/index" />
-      <Stack.Screen name="log/index" />
-      <Stack.Screen name="insights/index" />
-      <Stack.Screen name="care/index" />
-      <Stack.Screen name="partner/index" />
-      <Stack.Screen name="husband-dashboard/index" />
-    </Stack>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="auth/role" />
+        <Stack.Screen name="auth/login" />
+        <Stack.Screen name="auth/scan-qr" />
+        <Stack.Screen name="onboarding/index" />
+        <Stack.Screen name="home/index" />
+        <Stack.Screen name="calendar/index" />
+        <Stack.Screen name="log/index" />
+        <Stack.Screen name="insights/index" />
+        <Stack.Screen name="care/index" />
+        <Stack.Screen name="partner/index" />
+        <Stack.Screen name="husband-dashboard/index" />
+      </Stack>
+      <ToastNotification />
+    </View>
   );
 }
 
