@@ -9,6 +9,7 @@ import { Feather } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
 export default function RootLayout() {
+  const segments = useSegments();
   const [isReady, setIsReady] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
@@ -84,7 +85,6 @@ export default function RootLayout() {
   // Nếu chưa có profile mà cố tình truy cập các trang nội bộ (onboarding, home, partner...)
   // thì sẽ bị tự động đá về màn hình Chọn Vai trò.
   // Các màn hình Auth (role, login, scan-qr) được phép truy cập tự do.
-  const segments = useSegments();
   const isAuthRoute = segments[0] === 'auth';
   const isRoot = segments.length === 0;
   
