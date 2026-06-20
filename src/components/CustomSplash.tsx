@@ -5,37 +5,45 @@ const { width } = Dimensions.get('window');
 
 export default function CustomSplash() {
   const scaleValue = useRef(new Animated.Value(0.8)).current;
-  const opacityValue = useRef(new Animated.Value(0)).current;
+  const logoOpacityValue = useRef(new Animated.Value(0)).current;
+  const textOpacityValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Hiện dần lên (Fade In)
-    Animated.timing(opacityValue, {
+    // Logo hiện lên vừa phải
+    Animated.timing(logoOpacityValue, {
       toValue: 1,
       duration: 600,
       useNativeDriver: true,
     }).start();
 
-    // Hiệu ứng nhịp tim (Heartbeat)
+    // Dòng chữ "for embeiu" hiện lên thật chậm, rõ dần dần (2s)
+    Animated.timing(textOpacityValue, {
+      toValue: 1,
+      duration: 2000,
+      useNativeDriver: true,
+    }).start();
+
+    // Hiệu ứng nhịp tim (Heartbeat) - Nhẹ nhàng hơn
     Animated.loop(
       Animated.sequence([
         Animated.timing(scaleValue, {
-          toValue: 1.15,
-          duration: 250,
+          toValue: 1.08,
+          duration: 350,
           useNativeDriver: true,
         }),
         Animated.timing(scaleValue, {
           toValue: 1,
-          duration: 250,
+          duration: 350,
           useNativeDriver: true,
         }),
         Animated.timing(scaleValue, {
-          toValue: 1.15,
-          duration: 250,
+          toValue: 1.08,
+          duration: 350,
           useNativeDriver: true,
         }),
         Animated.timing(scaleValue, {
           toValue: 1,
-          duration: 600,
+          duration: 1000,
           useNativeDriver: true,
         })
       ])
@@ -44,15 +52,16 @@ export default function CustomSplash() {
 
   return (
     <View style={styles.container}>
-      <Animated.View style={{ transform: [{ scale: scaleValue }], opacity: opacityValue, alignItems: 'center' }}>
+      <Animated.View style={{ transform: [{ scale: scaleValue }], opacity: logoOpacityValue, alignItems: 'center' }}>
         <Image 
           source={require('../../assets/images/icon.png')} 
           style={styles.logo}
           resizeMode="cover"
         />
-        <Text style={styles.appName}>LunaCare</Text>
-        <Text style={styles.tagline}>for embeiu</Text>
       </Animated.View>
+      <Animated.Text style={[styles.tagline, { opacity: textOpacityValue }]}>
+        for embeiu
+      </Animated.Text>
     </View>
   );
 }
@@ -70,23 +79,16 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     marginBottom: 24,
     shadowColor: '#D81B60',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  appName: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#D81B60', // Hồng đậm
-    letterSpacing: 1,
-    marginBottom: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 8,
   },
   tagline: {
-    fontSize: 20,
-    color: '#F06292',
+    fontSize: 24,
+    color: '#D81B60',
     fontStyle: 'italic',
-    fontWeight: '600',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    letterSpacing: 0.8,
   }
 });

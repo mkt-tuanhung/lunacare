@@ -13,10 +13,10 @@ export default function RootLayout() {
   useEffect(() => {
     setIsReady(true);
     
-    // Tắt intro màn hình chờ sau 1.5 giây
+    // Tắt intro màn hình chờ sau 2.5 giây
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 1500);
+    }, 2500);
 
     return () => clearTimeout(timer);
   }, []);
