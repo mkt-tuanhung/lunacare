@@ -107,23 +107,31 @@ export const useProfileStore = create<ProfileState>()(
     const { profile } = get();
     if (!profile || !profile.uid) return;
     
+    // Lấy state của cycleStore (Tránh circular dependency)
+    const { useCycleStore } = require('./useCycleStore');
+    
+    const allUserData = {
+      healthProfile: profile.healthProfile,
+      appSettings: {
+        isAppLockEnabled: profile.isAppLockEnabled,
+        appLockPin: profile.appLockPin,
+        hideNotifications: profile.hideNotifications
+      },
+      periodEvents: useCycleStore.getState().periodEvents
+    };
+
     try {
       const { data, error } = await supabase
         .from('profiles')
         .upsert({ 
           id: profile.uid, // UUID từ Supabase Auth
           display_name: profile.displayName,
-          health_profile: profile.healthProfile,
           is_onboarded: true,
-          app_settings: {
-            isAppLockEnabled: profile.isAppLockEnabled,
-            appLockPin: profile.appLockPin,
-            hideNotifications: profile.hideNotifications
-          }
+          health_profile: allUserData
         });
         
       if (error) throw error;
-      console.log("✅ Đã cập nhật Health Profile lên Supabase thành công!");
+      console.log("✅ Đã cập nhật All User Data lên Supabase thành công!");
     } catch (error) {
       console.error("Lỗi khi lưu lên Supabase:", error);
     }

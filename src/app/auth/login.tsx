@@ -33,28 +33,29 @@ export default function LoginWife() {
         const { error, data } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         
-        // Kiểm tra xem đã làm Onboarding chưa bằng cách kéo data từ bảng profiles
+        // Lấy 1 cột duy nhất health_profile
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('is_onboarded, health_profile, display_name, app_settings, period_events')
+          .select('is_onboarded, health_profile, display_name')
           .eq('id', data.user.id)
           .single();
 
         const isOnboarded = profileData?.is_onboarded || false;
+        const allUserData = profileData?.health_profile || {};
         
         setProfile({ 
           uid: data.user.id, 
           displayName: profileData?.display_name || email.split('@')[0], 
           onboardingCompleted: isOnboarded, 
-          healthProfile: profileData?.health_profile || null, 
+          healthProfile: allUserData.healthProfile || null, 
           role: 'wife',
-          isAppLockEnabled: profileData?.app_settings?.isAppLockEnabled,
-          appLockPin: profileData?.app_settings?.appLockPin,
-          hideNotifications: profileData?.app_settings?.hideNotifications,
+          isAppLockEnabled: allUserData.appSettings?.isAppLockEnabled,
+          appLockPin: allUserData.appSettings?.appLockPin,
+          hideNotifications: allUserData.appSettings?.hideNotifications,
         });
 
-        if (profileData?.period_events) {
-          useCycleStore.getState().setPeriodEvents(profileData.period_events, true);
+        if (allUserData.periodEvents) {
+          useCycleStore.getState().setPeriodEvents(allUserData.periodEvents, true);
         }
 
         if (isOnboarded) {

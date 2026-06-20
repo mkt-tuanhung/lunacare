@@ -134,12 +134,7 @@ export const useCycleStore = create<CycleState>()(
     if (!profileStore.profile?.uid) return;
     
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ period_events: get().periodEvents })
-        .eq('id', profileStore.profile.uid);
-      if (error) throw error;
-      console.log("✅ Đã đồng bộ Lịch sử Chu kỳ kinh lên Supabase thành công!");
+      await profileStore.saveProfileToSupabase();
     } catch (e) {
       console.error("Lỗi khi lưu Chu kỳ lên Supabase:", e);
     }
