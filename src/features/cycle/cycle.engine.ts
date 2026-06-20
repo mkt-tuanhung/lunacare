@@ -182,13 +182,42 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
   const healthProfile = profileState.profile?.healthProfile ? { ...profileState.profile.healthProfile } : null;
 
   // [UPDATE] Làm cho Thuật toán Offline thông minh hơn bằng cách đọc Nhật ký Ghi nhận (Giống AI)
+  let dailyAdvice: string[] = [];
   if (healthProfile && recentLogs.length > 0) {
     const latestLog = recentLogs[0];
-    // Nếu hôm nay ghi nhận Vui vẻ / Bình thường -> Hủy bỏ cảnh báo Stress Rất cao từ Hồ sơ gốc
-    if (latestLog.moods && (latestLog.moods.includes('Vui vẻ') || latestLog.moods.includes('Bình thường') || latestLog.moods.includes('Bình tĩnh'))) {
-      if (healthProfile.stressLevel === 'Rất cao' || healthProfile.stressLevel === 'Hơi căng thẳng') {
-        healthProfile.stressLevel = 'Thấp';
+    
+    // Đưa ra lời khuyên dựa trên Nhật ký
+    if (latestLog.water_cups !== undefined && latestLog.water_cups !== null) {
+      if (latestLog.water_cups < 4) dailyAdvice.push("Hôm nay bạn uống hơi ít nước. Hãy cố gắng bổ sung thêm để cơ thể đào thải tốt hơn nhé.");
+      else if (latestLog.water_cups >= 8) dailyAdvice.push("Tuyệt vời! Bạn đang duy trì lượng nước rất tốt cho cơ thể.");
+    }
+    
+    if (latestLog.sleep_hours !== undefined && latestLog.sleep_hours !== null) {
+      if (latestLog.sleep_hours < 6) dailyAdvice.push("Bạn có vẻ đang thiếu ngủ. Hãy cố gắng chợp mắt sớm hơn vào tối nay để phục hồi năng lượng.");
+      else if (latestLog.sleep_hours >= 7) dailyAdvice.push("Giấc ngủ của bạn đang rất tốt, hãy tiếp tục duy trì nhé.");
+    }
+
+    if (latestLog.moods && Array.isArray(latestLog.moods)) {
+      if (latestLog.moods.includes('Căng thẳng') || latestLog.moods.includes('Buồn bã') || latestLog.moods.includes('Khó chịu')) {
+        dailyAdvice.push("Có vẻ hôm nay tâm trạng bạn không được thoải mái. Hãy dành chút thời gian nghe nhạc hoặc làm điều mình thích để thư giãn nhé.");
       }
+      if (latestLog.moods.includes('Vui vẻ') || latestLog.moods.includes('Bình thường') || latestLog.moods.includes('Bình tĩnh')) {
+        if (healthProfile.stressLevel === 'Rất cao' || healthProfile.stressLevel === 'Hơi căng thẳng') {
+          healthProfile.stressLevel = 'Thấp';
+        }
+      }
+    }
+    
+    if (latestLog.symptoms && Array.isArray(latestLog.symptoms)) {
+        if (latestLog.symptoms.includes('Đau bụng') || latestLog.symptoms.includes('Đau lưng') || latestLog.symptoms.includes('Căng tức ngực')) {
+            dailyAdvice.push("Nếu bạn đang bị đau bụng hoặc nhức mỏi, hãy thử chườm ấm hoặc uống một chút trà gừng ấm để xoa dịu nhé.");
+        }
+        if (latestLog.symptoms.includes('Mụn')) {
+            dailyAdvice.push("Nổi mụn có thể do nội tiết tố thay đổi. Hãy chú ý làm sạch da và hạn chế đồ ăn cay nóng trong những ngày này.");
+        }
+        if (latestLog.symptoms.includes('Đau đầu')) {
+            dailyAdvice.push("Bạn đang bị đau đầu. Hãy thử massage nhẹ nhàng vùng thái dương và uống một cốc nước ấm.");
+        }
     }
   }
 
@@ -362,6 +391,11 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
   const fertileWindowEnd = addDays(ovulationDate, 1);
   const pmsWindowStart = addDays(predictedStartDate, -7);
   const pmsWindowEnd = addDays(predictedStartDate, -1);
+
+  // Đưa lời khuyên hàng ngày lên đầu ghi chú
+  if (dailyAdvice.length > 0) {
+    modifierNotes = [...dailyAdvice, ...modifierNotes];
+  }
 
   return {
     predictedStartDate,

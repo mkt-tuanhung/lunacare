@@ -125,7 +125,7 @@ export default function LogToday() {
             }
         } else {
             // Nếu không có chu kỳ nào gần đây -> Tạo chu kỳ mới ngay hôm nay!
-            cycleStore.addPeriodEvent({ startDate: todayStr, endDate: todayStr });
+            cycleStore.addPeriodEvent({ startDate: todayStr, endDate: todayStr, userId: payload.user_id });
         }
       }
 
