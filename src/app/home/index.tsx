@@ -144,6 +144,51 @@ export default function Home() {
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const rippleAnim = useRef(new Animated.Value(0)).current;
+  const moodBubbleAnim = useRef(new Animated.Value(0)).current;
+  const moodFloatAnim = useRef(new Animated.Value(0)).current;
+  const [currentMood, setCurrentMood] = useState('✨');
+
+  useEffect(() => {
+    // Cute mood bubble logic
+    const moods = ['🌸', '✨', '🥺', '🥰', '😴', '🍓', '🍡', '☁️', '🎀'];
+    
+    const showMoodBubble = () => {
+      setCurrentMood(moods[Math.floor(Math.random() * moods.length)]);
+      
+      Animated.spring(moodBubbleAnim, {
+        toValue: 1,
+        friction: 4,
+        tension: 60,
+        useNativeDriver: true
+      }).start();
+
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(moodFloatAnim, { toValue: -4, duration: 400, useNativeDriver: true }),
+          Animated.timing(moodFloatAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+        ])
+      ).start();
+
+      setTimeout(() => {
+        Animated.timing(moodBubbleAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true
+        }).start(() => {
+          moodFloatAnim.stopAnimation();
+          moodFloatAnim.setValue(0);
+        });
+      }, 4000);
+    };
+
+    const initialTimer = setTimeout(showMoodBubble, 2000);
+    const intervalTimer = setInterval(showMoodBubble, 14000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(intervalTimer);
+    };
+  }, [moodBubbleAnim, moodFloatAnim]);
 
   const handlePickAvatar = async () => {
     try {
@@ -154,19 +199,19 @@ export default function Home() {
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         setIsUploading(true);
-        const url = await uploadImageToR2(result.assets[0].uri, profile?.uid || 'guest', 'avatars');
-        if (url) {
-          updateAvatarUrl(url);
-          useAlertStore.getState().showAlert('Thành công', 'Đã cập nhật ảnh đại diện');
+        const uri = result.assets[0].uri;
+        const uploadedUrl = await uploadAvatarToR2(uri, profile?.uid || 'guest');
+        if (uploadedUrl) {
+          updateAvatarUrl(uploadedUrl);
         } else {
-          useAlertStore.getState().showAlert('Lỗi', 'Không thể tải ảnh lên. Vui lòng thử lại.');
+          useAlertStore.getState().showAlert("Lỗi", "Không thể upload ảnh lên Cloudflare R2 lúc này.");
         }
       }
-    } catch (e) {
-      console.error(e);
-      useAlertStore.getState().showAlert('Lỗi', 'Có lỗi xảy ra khi chọn ảnh.');
+    } catch (error) {
+      console.error(error);
+      useAlertStore.getState().showAlert("Lỗi", "Có lỗi xảy ra khi chọn ảnh.");
     } finally {
       setIsUploading(false);
     }
@@ -203,7 +248,8 @@ export default function Home() {
         const uploadedUrls: string[] = [];
         
         for (const asset of result.assets) {
-          const url = await uploadImageToR2(asset.uri, profile?.uid || 'guest', 'albums');
+          // Note: using placeholder uploadImageToR2 since the instruction implied adding it to previous logic
+          const url = await uploadAvatarToR2(asset.uri, profile?.uid || 'guest');
           if (url) uploadedUrls.push(url);
         }
 
@@ -348,33 +394,6 @@ export default function Home() {
     }
   }
 
-  const handlePickAvatar = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setIsUploading(true);
-        const uri = result.assets[0].uri;
-        const uploadedUrl = await uploadAvatarToR2(uri, profile?.uid || 'guest');
-        if (uploadedUrl) {
-          updateAvatarUrl(uploadedUrl);
-        } else {
-          useAlertStore.getState().showAlert("Lỗi", "Không thể upload ảnh lên Cloudflare R2 lúc này.");
-        }
-      }
-    } catch (error) {
-      console.error(error);
-      useAlertStore.getState().showAlert("Lỗi", "Có lỗi xảy ra khi chọn ảnh.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   const handleOpenNotifications = () => {
     useAlertStore.getState().showAlert(
       "Thông báo", 
@@ -389,15 +408,30 @@ export default function Home() {
         
         {/* Top Header */}
         <View style={styles.topAppBar}>
-          <Pressable style={styles.profileBtn} onPress={handleAvatarPress}>
-            {isUploading ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : profile?.avatarUrl ? (
-              <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
-            ) : (
-              <View style={styles.avatarMock}><Text style={{fontSize: 20}}>👱‍♀️</Text></View>
-            )}
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', zIndex: 10 }}>
+            <Pressable style={styles.profileBtn} onPress={handleAvatarPress}>
+              {isUploading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : profile?.avatarUrl ? (
+                <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarMock}><Text style={{fontSize: 20}}>👱‍♀️</Text></View>
+              )}
+            </Pressable>
+
+            {/* Cute Mood Bubble */}
+            <Animated.View style={[styles.moodBubble, {
+              opacity: moodBubbleAnim,
+              transform: [
+                { scale: moodBubbleAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) },
+                { translateY: moodFloatAnim }
+              ]
+            }]}>
+              <View style={styles.moodBubbleTail} />
+              <Text style={styles.moodEmoji}>{currentMood}</Text>
+            </Animated.View>
+          </View>
+          
           <Image source={require('../../../assets/images/iump_decor.png')} style={styles.appLogo} resizeMode="contain" />
           <Pressable style={styles.notiBtn} onPress={handleOpenNotifications}>
             <Feather name="bell" size={24} color={colors.text} />
@@ -586,10 +620,15 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  topAppBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 45 : 30, paddingBottom: 5 },
-  profileBtn: { padding: 4, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  topAppBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 45 : 30, paddingBottom: 5, zIndex: 10 },
+  profileBtn: { padding: 4, width: 44, height: 44, justifyContent: 'center', alignItems: 'center', zIndex: 11 },
   avatarMock: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8F3F1', justifyContent: 'center', alignItems: 'center' },
   avatarImage: { width: 36, height: 36, borderRadius: 18 },
+  
+  moodBubble: { position: 'absolute', left: 45, top: -5, backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, shadowColor: '#FF4B72', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4, zIndex: 10, justifyContent: 'center', alignItems: 'center' },
+  moodBubbleTail: { position: 'absolute', left: -6, bottom: 8, width: 0, height: 0, borderTopWidth: 6, borderRightWidth: 8, borderBottomWidth: 6, borderStyle: 'solid', backgroundColor: 'transparent', borderTopColor: 'transparent', borderRightColor: 'white', borderBottomColor: 'transparent', transform: [{ rotate: '15deg' }] },
+  moodEmoji: { fontSize: 16 },
+
   appLogo: { 
     height: 32, 
     width: 100, 
