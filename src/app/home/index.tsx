@@ -60,10 +60,14 @@ const WeekCalendar = ({
 
     let isFertile = false;
     let isOvulation = false;
-    if (prediction && prediction.fertileWindowStart && prediction.fertileWindowEnd) {
-      if (dStr >= prediction.fertileWindowStart && dStr <= prediction.fertileWindowEnd) {
+    // Dùng current cycle fields để tô màu tuần hiện tại
+    const activeFertileStart = prediction?.currentFertileWindowStart ?? prediction?.fertileWindowStart;
+    const activeFertileEnd = prediction?.currentFertileWindowEnd ?? prediction?.fertileWindowEnd;
+    const activeOvulDate = prediction?.currentOvulationDate ?? prediction?.ovulationDate;
+    if (activeFertileStart && activeFertileEnd) {
+      if (dStr >= activeFertileStart && dStr <= activeFertileEnd) {
         isFertile = true;
-        if (dStr === prediction.ovulationDate) isOvulation = true;
+        if (dStr === activeOvulDate) isOvulation = true;
       }
     }
 
@@ -212,29 +216,43 @@ export default function Home() {
       bleedingDay = Math.round((todayTime - new Date(latestEvent.startDate).getTime()) / (1000*60*60*24)) + 1;
     }
 
+    // Dùng currentOvulationDate (chu kỳ đang chạy) để hiển thị phase hôm nay
+    const activeOvulDate = prediction.currentOvulationDate ?? prediction.ovulationDate;
+    const activeFertileStart = prediction.currentFertileWindowStart ?? prediction.fertileWindowStart;
+    const activeFertileEnd = prediction.currentFertileWindowEnd ?? prediction.fertileWindowEnd;
+    const activePmsStart = prediction.currentPmsWindowStart ?? prediction.pmsWindowStart;
+    const activePmsEnd = prediction.currentPmsWindowEnd ?? prediction.pmsWindowEnd;
+
     if (isBleeding) {
       statusTitle = 'Kỳ kinh nguyệt';
       statusSub = 'Ngày';
       statusValue = bleedingDay.toString();
       circleColors = ['#FF758F', '#FF4B72'];
-    } else if (prediction.ovulationDate && todayStr <= prediction.ovulationDate) {
-      const isFertile = prediction.fertileWindowStart && prediction.fertileWindowEnd
-        && todayStr >= prediction.fertileWindowStart && todayStr <= prediction.fertileWindowEnd;
+    } else if (activePmsStart && activePmsEnd && todayStr >= activePmsStart && todayStr <= activePmsEnd) {
+      // PMS window (trước kỳ 1–7 ngày)
+      const daysToNext = Math.round((new Date(activePmsEnd).getTime() + 86400000 - todayTime) / (1000*60*60*24));
+      statusTitle = 'Giai đoạn PMS';
+      statusSub = `Kỳ kinh còn ${daysToNext} ngày`;
+      statusValue = '';
+      circleColors = ['#CE93D8', '#AB47BC'];
+    } else if (activeOvulDate && todayStr <= activeOvulDate) {
+      const isFertile = activeFertileStart && activeFertileEnd
+        && todayStr >= activeFertileStart && todayStr <= activeFertileEnd;
 
-      if (todayStr === prediction.ovulationDate) {
+      if (todayStr === activeOvulDate) {
         statusTitle = 'Ngày rụng trứng';
         statusSub = 'Cơ hội thụ thai Cao';
         statusValue = 'Cao';
         circleColors = ['#00E5FF', '#00B8D4'];
       } else {
-        const ovulDate = new Date(prediction.ovulationDate);
-        const diffToOvul = Math.round((ovulDate.getTime() - todayTime) / (1000*60*60*24));
+        const diffToOvul = Math.round((new Date(activeOvulDate).getTime() - todayTime) / (1000*60*60*24));
         statusTitle = 'Rụng trứng sau';
         statusValue = `${diffToOvul} ngày`;
-        statusSub = isFertile ? 'Cơ hội thụ thai: Cao' : 'Cơ hội thụ thai: Thấp (i)';
+        statusSub = isFertile ? 'Cơ hội thụ thai: Cao' : 'Theo dõi chu kỳ';
         circleColors = isFertile ? ['#4DD0E1', '#00BCD4'] : ['#FFCDD2', '#F48FB1'];
       }
     } else {
+      // Sau rụng trứng hoặc không đủ dữ liệu → hiển thị đếm ngược đến kỳ tiếp theo
       const nextStart = prediction.predictedStartDate ? new Date(prediction.predictedStartDate).getTime() : Infinity;
       if (todayTime > nextStart) {
         const delayDays = Math.round((todayTime - nextStart) / (1000*60*60*24));

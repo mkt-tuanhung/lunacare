@@ -1,4 +1,5 @@
 import { Cycle, CyclePrediction } from './cycle.types';
+import { addDays } from './cycle.engine';
 import type { HealthProfile } from '../../store/useProfileStore';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
@@ -40,6 +41,23 @@ export async function predictCycleWithAI(cycles: Cycle[], healthProfile?: Health
     }
 
     console.log("AI Prediction Success", prediction);
+
+    // Backfill current cycle fields nếu AI backend chưa trả về
+    // Tính từ chu kỳ cuối cùng trong danh sách
+    if (!prediction.currentOvulationDate && prediction.predictedStartDate && prediction.predictedCycleLength) {
+      const sortedCycles = [...cycles].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+      const lastCycle = sortedCycles[sortedCycles.length - 1];
+      if (lastCycle) {
+        const curNextPeriod = addDays(lastCycle.startDate, prediction.predictedCycleLength);
+        const curOvDate = addDays(curNextPeriod, -14);
+        prediction.currentOvulationDate = curOvDate;
+        prediction.currentFertileWindowStart = addDays(curOvDate, -5);
+        prediction.currentFertileWindowEnd = addDays(curOvDate, 1);
+        prediction.currentPmsWindowStart = addDays(curNextPeriod, -7);
+        prediction.currentPmsWindowEnd = addDays(curNextPeriod, -1);
+      }
+    }
+
     return prediction;
 
   } catch (err: any) {

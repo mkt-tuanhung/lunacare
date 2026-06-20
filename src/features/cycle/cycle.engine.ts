@@ -92,9 +92,18 @@ export function predictCycle(
       const predictedCycleLength = parseInt(String(healthProfile.cycleLength)) || 28;
       const predictedPeriodLength = parseInt(String(healthProfile.periodDuration)) || 5;
 
-      let pStartDate = addDays(healthProfile.lastPeriodDate, predictedCycleLength);
+      // Tính chu kỳ hiện tại từ lastPeriodDate
+      const curNextPeriod = addDays(healthProfile.lastPeriodDate, predictedCycleLength);
+      const curOvDate = addDays(curNextPeriod, -14);
+      const curFertileStart = addDays(curOvDate, -5);
+      const curFertileEnd = addDays(curOvDate, 1);
+      const curPmsStart = addDays(curNextPeriod, -7);
+      const curPmsEnd = addDays(curNextPeriod, -1);
+
+      // Tìm kỳ tiếp theo luôn ở tương lai
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      let pStartDate = curNextPeriod;
       let loopCount = 0;
       while (new Date(pStartDate).getTime() <= today.getTime() && loopCount < 100) {
         pStartDate = addDays(pStartDate, predictedCycleLength);
@@ -113,6 +122,11 @@ export function predictCycle(
         predictedEndDate: pEndDate,
         predictedCycleLength,
         predictedPeriodLength,
+        currentOvulationDate: curOvDate,
+        currentFertileWindowStart: curFertileStart,
+        currentFertileWindowEnd: curFertileEnd,
+        currentPmsWindowStart: curPmsStart,
+        currentPmsWindowEnd: curPmsEnd,
         ovulationDate: ovDate,
         fertileWindowStart: fertileStart,
         fertileWindowEnd: fertileEnd,
@@ -126,6 +140,8 @@ export function predictCycle(
 
     return {
       predictedStartDate: null, predictedEndDate: null, predictedCycleLength: null, predictedPeriodLength: null,
+      currentOvulationDate: null, currentFertileWindowStart: null, currentFertileWindowEnd: null,
+      currentPmsWindowStart: null, currentPmsWindowEnd: null,
       ovulationDate: null, fertileWindowStart: null, fertileWindowEnd: null, pmsWindowStart: null, pmsWindowEnd: null,
       confidence: 'low', confidenceScore: 0, notes: ['Chưa đủ dữ liệu dự đoán.'],
     };
@@ -148,10 +164,20 @@ export function predictCycle(
     : (parseInt(String(healthProfile?.periodDuration)) || 5);
 
   const lastCycle = sorted[sorted.length - 1];
-  let predictedStartDate = addDays(lastCycle.startDate, predictedCycleLength);
 
+  // Tính ngày rụng trứng & cửa sổ thụ thai của chu kỳ HIỆN TẠI đang chạy
+  // (tính từ lastCycle.startDate, không phải từ predictedStartDate)
+  const currentNextPeriodFromLast = addDays(lastCycle.startDate, predictedCycleLength);
+  const currentOvulationDate = addDays(currentNextPeriodFromLast, -14);
+  const currentFertileWindowStart = addDays(currentOvulationDate, -5);
+  const currentFertileWindowEnd = addDays(currentOvulationDate, 1);
+  const currentPmsWindowStart = addDays(currentNextPeriodFromLast, -7);
+  const currentPmsWindowEnd = addDays(currentNextPeriodFromLast, -1);
+
+  // Tính kỳ kinh TIẾP THEO (luôn ở tương lai so với hôm nay)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  let predictedStartDate = currentNextPeriodFromLast;
   let loopCount = 0;
   while (new Date(predictedStartDate).getTime() <= today.getTime() && loopCount < 100) {
     predictedStartDate = addDays(predictedStartDate, predictedCycleLength);
@@ -212,6 +238,11 @@ export function predictCycle(
     predictedEndDate,
     predictedCycleLength,
     predictedPeriodLength,
+    currentOvulationDate,
+    currentFertileWindowStart,
+    currentFertileWindowEnd,
+    currentPmsWindowStart,
+    currentPmsWindowEnd,
     ovulationDate,
     fertileWindowStart,
     fertileWindowEnd,

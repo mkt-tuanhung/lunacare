@@ -1,9 +1,7 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { Feather, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
-
-const { width } = Dimensions.get('window');
 
 import { useState, useEffect } from 'react';
 import { useCycleStore } from '../../store/useCycleStore';
@@ -82,22 +80,42 @@ export default function Calendar() {
     PERIOD_DAYS.push(...collectDaysInMonth(ev.startDate, endStr));
   });
 
-  // Render dự đoán (Tương lai)
+  // Render dự đoán (dùng current cycle fields cho chu kỳ đang chạy + predicted cho kỳ tới)
   if (prediction && prediction.predictedStartDate && prediction.predictedEndDate) {
     PERIOD_DAYS.push(...collectDaysInMonth(prediction.predictedStartDate, prediction.predictedEndDate));
 
-    if (prediction.fertileWindowStart && prediction.fertileWindowEnd) {
-      FERTILE_DAYS.push(...collectDaysInMonth(prediction.fertileWindowStart, prediction.fertileWindowEnd));
+    // Cửa sổ thụ thai: ưu tiên chu kỳ hiện tại, fallback sang predicted
+    const fertileStart = prediction.currentFertileWindowStart ?? prediction.fertileWindowStart;
+    const fertileEnd = prediction.currentFertileWindowEnd ?? prediction.fertileWindowEnd;
+    if (fertileStart && fertileEnd) {
+      FERTILE_DAYS.push(...collectDaysInMonth(fertileStart, fertileEnd));
     }
 
-    if (prediction.ovulationDate) {
-      const [oy, om, od] = prediction.ovulationDate.split('-').map(Number);
+    // Ngày rụng trứng: ưu tiên chu kỳ hiện tại
+    const ovDate = prediction.currentOvulationDate ?? prediction.ovulationDate;
+    if (ovDate) {
+      const [oy, om, od] = ovDate.split('-').map(Number);
       if (oy === year && om - 1 === month) {
         OVULATION_DAY = od;
       }
     }
+    // Cũng hiển thị ovulation của kỳ tiếp theo nếu trong tháng đang xem
+    if (prediction.ovulationDate && prediction.ovulationDate !== (prediction.currentOvulationDate ?? prediction.ovulationDate)) {
+      const [oy2, om2, od2] = prediction.ovulationDate.split('-').map(Number);
+      if (oy2 === year && om2 - 1 === month) {
+        OVULATION_DAY = od2;
+      }
+    }
 
-    if (prediction.pmsWindowStart && prediction.pmsWindowEnd) {
+    // PMS: ưu tiên chu kỳ hiện tại
+    const pmsStart = prediction.currentPmsWindowStart ?? prediction.pmsWindowStart;
+    const pmsEnd = prediction.currentPmsWindowEnd ?? prediction.pmsWindowEnd;
+    if (pmsStart && pmsEnd) {
+      PMS_DAYS.push(...collectDaysInMonth(pmsStart, pmsEnd));
+    }
+    // Cũng thêm PMS của kỳ tiếp theo nếu khác
+    if (prediction.pmsWindowStart && prediction.pmsWindowEnd &&
+        prediction.pmsWindowStart !== (prediction.currentPmsWindowStart ?? prediction.pmsWindowStart)) {
       PMS_DAYS.push(...collectDaysInMonth(prediction.pmsWindowStart, prediction.pmsWindowEnd));
     }
   }
