@@ -1,91 +1,219 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../../theme/colors';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { colors } from '../../theme/colors';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useCycleStore } from '../../store/useCycleStore';
+import { supabase } from '../../lib/supabase';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
-export default function Reports() {
+export default function ReportsScreen() {
   const router = useRouter();
-  const profile = useProfileStore(state => state.profile);
-  const { periodEvents, prediction } = useCycleStore();
+  const { profile } = useProfileStore();
+  const { prediction } = useCycleStore();
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
 
-  const handleExportPDF = () => {
-    Alert.alert("Thành công", "Đã xuất báo cáo sức khỏe (PDF) thành công! File đã được lưu vào máy.");
+  useEffect(() => {
+    async function fetchLogs() {
+      if (!profile?.uid) return;
+      const { data, error } = await supabase
+        .from('daily_logs')
+        .select('*')
+        .eq('user_id', profile.uid)
+        .order('log_date', { ascending: false })
+        .limit(90); // 3 tháng gần nhất
+        
+      if (!error && data) {
+        setLogs(data);
+      }
+      setLoading(false);
+    }
+    fetchLogs();
+  }, [profile?.uid]);
+
+  // Medical Intelligence: Tính toán logic y tế
+  const logsWithSymptoms = logs.filter(l => l.symptoms && l.symptoms.length > 0);
+  const logsWithPain = logs.filter(l => typeof l.pain_score === 'number' && l.pain_score > 0);
+  
+  const severePainLogs = logsWithPain.filter(l => l.pain_score >= 8);
+  const hasEndometriosisWarning = severePainLogs.length >= 3; 
+  
+  const hasPcosWarning = prediction && prediction.predictedCycleLength && prediction.predictedCycleLength > 45;
+
+  const handleExportPDF = async () => {
+    if (!profile) return;
+    setGenerating(true);
+    
+    try {
+      const todayDate = new Date().toLocaleDateString('vi-VN');
+      
+      let logsHtml = '';
+      logs.slice(0, 15).forEach(log => {
+        logsHtml += `
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${new Date(log.log_date).toLocaleDateString('vi-VN')}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${log.is_period_day ? 'Có' : 'Không'}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${log.pain_score || 0}/10</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${(log.symptoms || []).join(', ')}</td>
+          </tr>
+        `;
+      });
+
+      const htmlContent = `
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <style>
+              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; padding: 40px; }
+              h1 { color: #FF4B72; text-align: center; font-size: 28px; border-bottom: 2px solid #FF4B72; padding-bottom: 10px; }
+              h2 { color: #2C3E50; font-size: 20px; margin-top: 30px; }
+              .header-info { display: flex; justify-content: space-between; margin-top: 20px; background: #FFF0F3; padding: 15px; border-radius: 8px; }
+              .info-item { margin-bottom: 5px; }
+              .warning-box { background: #FFEBEE; border-left: 4px solid #F44336; padding: 15px; margin-top: 20px; }
+              .warning-title { color: #F44336; font-weight: bold; margin-bottom: 5px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+              th { text-align: left; background-color: #f2f2f2; padding: 10px 8px; border-bottom: 2px solid #ddd; }
+              .footer { margin-top: 50px; font-size: 12px; color: #888; text-align: center; }
+            </style>
+          </head>
+          <body>
+            <h1>Báo Cáo Sức Khoẻ Chu Kỳ (LunaCare)</h1>
+            
+            <div class="header-info">
+              <div>
+                <div class="info-item"><strong>Họ và tên:</strong> ${profile.displayName || 'Khách'}</div>
+                <div class="info-item"><strong>Tuổi / Chiều cao / Cân nặng:</strong> ${profile.healthProfile?.age || '?'} tuổi / ${profile.healthProfile?.height || '?'} cm / ${profile.healthProfile?.weight || '?'} kg</div>
+              </div>
+              <div>
+                <div class="info-item"><strong>Ngày xuất báo cáo:</strong> ${todayDate}</div>
+                <div class="info-item"><strong>Chu kỳ trung bình:</strong> ${prediction?.predictedCycleLength || '?'} ngày</div>
+              </div>
+            </div>
+
+            ${(hasEndometriosisWarning || hasPcosWarning) ? `
+            <div class="warning-box">
+              <div class="warning-title">⚠️ Đề xuất Thăm khám Bác sĩ</div>
+              <ul style="margin: 0; padding-left: 20px;">
+                ${hasEndometriosisWarning ? '<li>Bạn có nhiều ngày ghi nhận mức độ đau bụng rất cao (>= 8/10). Hãy trao đổi với bác sĩ để tầm soát <b>Lạc nội mạc tử cung</b>.</li>' : ''}
+                ${hasPcosWarning ? '<li>Chu kỳ của bạn kéo dài bất thường (> 45 ngày). Hãy trao đổi với bác sĩ để tầm soát <b>Hội chứng buồng trứng đa nang (PCOS)</b>.</li>' : ''}
+              </ul>
+            </div>
+            ` : ''}
+
+            <h2>Ghi chú Gần đây (15 ngày có dữ liệu gần nhất)</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Ngày</th>
+                  <th>Hành kinh</th>
+                  <th>Mức độ đau</th>
+                  <th>Triệu chứng</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${logsHtml || '<tr><td colspan="4" style="text-align:center; padding: 10px;">Chưa có dữ liệu</td></tr>'}
+              </tbody>
+            </table>
+
+            <div class="footer">
+              Báo cáo được xuất tự động từ ứng dụng LunaCare.<br/>
+              <i>Lưu ý: LunaCare không chẩn đoán bệnh, báo cáo này chỉ dùng để cung cấp dữ liệu tham khảo cho Bác sĩ.</i>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false
+      });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Chia sẻ Báo Cáo Y Tế LunaCare',
+          UTI: 'com.adobe.pdf'
+        });
+      } else {
+        Alert.alert('Lỗi', 'Thiết bị của bạn không hỗ trợ chia sẻ file PDF.');
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Lỗi', 'Không thể tạo file PDF lúc này.');
+    } finally {
+      setGenerating(false);
+    }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={28} color={colors.text} />
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Feather name="arrow-left" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Báo Cáo Sức Khỏe</Text>
-        <Pressable onPress={handleExportPDF} style={styles.exportBtn}>
-          <Feather name="download" size={24} color={colors.primary} />
-        </Pressable>
+        <Text style={styles.headerTitle}>Báo cáo Y Tế</Text>
+        <View style={{ width: 44 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        <View style={styles.reportSheet}>
-          
-          {/* Header */}
-          <View style={styles.reportHeader}>
-            <View style={styles.logoBox}>
-              <MaterialCommunityIcons name="moon-waxing-crescent" size={32} color="white" />
-            </View>
-            <View>
-              <Text style={styles.reportTitle}>MEDICAL REPORT</Text>
-              <Text style={styles.reportSubtitle}>Generated by For Embeiu</Text>
-            </View>
-          </View>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.subtitle}>
+          Tổng hợp thông tin sức khỏe chu kỳ của bạn trong 3 tháng qua để gửi cho Bác sĩ.
+        </Text>
 
-          <View style={styles.divider} />
-
-          {/* Patient Info */}
-          <View style={styles.infoSection}>
-            <Text style={styles.sectionHeading}>Thông tin cá nhân</Text>
-            <Text style={styles.infoText}><Text style={styles.bold}>Họ và tên:</Text> {profile?.displayName || 'Vợ Yêu'}</Text>
-            <Text style={styles.infoText}><Text style={styles.bold}>Độ dài chu kỳ (TB):</Text> {prediction?.predictedCycleLength || 28} ngày</Text>
-            <Text style={styles.infoText}><Text style={styles.bold}>Số ngày hành kinh (TB):</Text> {prediction?.predictedPeriodLength || 5} ngày</Text>
-            <Text style={styles.infoText}><Text style={styles.bold}>Ghi chú y tế:</Text> {profile?.healthProfile?.medicalConditions?.join(', ') || 'Không có'}</Text>
-          </View>
-
-          {/* Cycle History */}
-          <View style={styles.infoSection}>
-            <Text style={styles.sectionHeading}>Lịch sử chu kỳ gần đây</Text>
-            {periodEvents.slice(-3).reverse().map((c: any, idx: number) => (
-              <View key={idx} style={styles.cycleRow}>
-                <Text style={styles.cycleDate}>{new Date(c.startDate).toLocaleDateString('vi-VN')}</Text>
-                <Text style={styles.cycleLength}>{c.endDate ? 'Đã kết thúc' : 'Đang diễn ra'}</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+        ) : (
+          <>
+            <View style={styles.prepCard}>
+              <View style={styles.prepHeader}>
+                <MaterialCommunityIcons name="doctor" size={28} color="#FF9800" />
+                <Text style={styles.prepTitle}>Doctor Visit Prep</Text>
               </View>
-            ))}
-            {periodEvents.length === 0 && <Text style={styles.infoText}>Chưa có dữ liệu</Text>}
-          </View>
+              
+              <Text style={styles.prepDesc}>Dựa vào dữ liệu của bạn, dưới đây là những câu hỏi bạn nên tham khảo ý kiến bác sĩ:</Text>
+              
+              <View style={styles.questionBox}>
+                <Text style={styles.questionText}>• Chu kỳ của tôi trung bình {prediction?.predictedCycleLength || 28} ngày, như vậy có được xem là bình thường không?</Text>
+                
+                {hasEndometriosisWarning && (
+                  <Text style={[styles.questionText, { color: '#D32F2F', fontWeight: 'bold' }]}>
+                    • Tôi thường bị đau bụng dữ dội trong kỳ kinh. Liệu có nguy cơ Lạc nội mạc tử cung không?
+                  </Text>
+                )}
+                
+                {hasPcosWarning && (
+                  <Text style={[styles.questionText, { color: '#D32F2F', fontWeight: 'bold' }]}>
+                    • Gần đây chu kỳ của tôi rất thưa (>45 ngày). Tôi có cần siêu âm buồng trứng đa nang (PCOS) không?
+                  </Text>
+                )}
+                
+                <Text style={styles.questionText}>• Tôi nên bổ sung vitamin hay thực phẩm gì để giảm bớt mệt mỏi trong những ngày này?</Text>
+              </View>
+            </View>
 
-          {/* Symptoms summary */}
-          <View style={styles.infoSection}>
-            <Text style={styles.sectionHeading}>Triệu chứng lâm sàng nổi bật</Text>
-            <Text style={styles.infoText}>• Đau bụng kinh (Mức độ vừa đến nặng)</Text>
-            <Text style={styles.infoText}>• Đau lưng dưới</Text>
-            <Text style={styles.infoText}>• Mất ngủ (thường vào ngày 1-2 của chu kỳ)</Text>
-          </View>
-
-          {/* Questions for doctor */}
-          <View style={styles.infoSection}>
-            <Text style={styles.sectionHeading}>Gợi ý câu hỏi dành cho Bác sĩ</Text>
-            <Text style={styles.infoText}>1. Tôi thường bị đau bụng khá dữ dội vào ngày đầu tiên, có cách nào giảm đau an toàn không?</Text>
-            <Text style={styles.infoText}>2. Chu kỳ của tôi có độ biến thiên cao (±5 ngày), điều này có ảnh hưởng đến khả năng thụ thai?</Text>
-          </View>
-
-          <View style={styles.footerStamp}>
-            <Text style={styles.stampText}>For Embeiu Data Export</Text>
-            <Text style={styles.stampDate}>{new Date().toLocaleDateString('vi-VN')}</Text>
-          </View>
-
-        </View>
-
+            <Pressable 
+              style={[styles.exportBtn, generating && { opacity: 0.7 }]} 
+              onPress={handleExportPDF}
+              disabled={generating}
+            >
+              {generating ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <>
+                  <Feather name="file-text" size={20} color="white" />
+                  <Text style={styles.exportBtnText}>Tạo & Xuất file PDF</Text>
+                </>
+              )}
+            </Pressable>
+            <Text style={styles.noteText}>
+              Báo cáo bao gồm biểu đồ thống kê mức độ đau, chu kỳ trung bình và log ghi chú triệu chứng chi tiết.
+            </Text>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -94,31 +222,21 @@ export default function Reports() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: colors.background },
-  backBtn: { width: 44, height: 44, justifyContent: 'center' },
-  exportBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'flex-end' },
+  backButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'flex-start' },
   headerTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
   
-  scrollContent: { padding: 24, paddingBottom: 60 },
-
-  reportSheet: { backgroundColor: 'white', padding: 24, borderRadius: 8, boxShadow: '0px 8px 30px rgba(0,0,0,0.08)', borderWidth: 1, borderColor: '#EEEEEE' },
+  scrollContent: { padding: 24, paddingBottom: 100 },
+  subtitle: { fontSize: 16, color: colors.textMuted, marginBottom: 25, lineHeight: 22 },
   
-  reportHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  logoBox: { width: 48, height: 48, borderRadius: 8, backgroundColor: colors.primaryDark, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  reportTitle: { fontSize: 20, fontWeight: '900', color: colors.primaryDark, letterSpacing: 1 },
-  reportSubtitle: { fontSize: 13, color: colors.textMuted },
+  prepCard: { backgroundColor: '#FFF8E1', borderRadius: 20, padding: 20, marginBottom: 30, borderWidth: 1, borderColor: '#FFECB3' },
+  prepHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  prepTitle: { fontSize: 18, fontWeight: '700', color: '#FF9800', marginLeft: 10 },
+  prepDesc: { fontSize: 14, color: '#5D4037', marginBottom: 15, lineHeight: 20 },
   
-  divider: { height: 2, backgroundColor: colors.primaryDark, opacity: 0.1, marginBottom: 20 },
-
-  infoSection: { marginBottom: 25 },
-  sectionHeading: { fontSize: 15, fontWeight: '800', color: colors.primaryDark, textTransform: 'uppercase', marginBottom: 10, backgroundColor: '#F5F5F5', paddingVertical: 6, paddingHorizontal: 10 },
-  infoText: { fontSize: 14, color: '#333333', lineHeight: 24, marginBottom: 4 },
-  bold: { fontWeight: '700' },
-
-  cycleRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  cycleDate: { fontSize: 14, fontWeight: '600', color: '#333' },
-  cycleLength: { fontSize: 14, color: '#666' },
-
-  footerStamp: { marginTop: 20, alignItems: 'center', paddingTop: 20, borderTopWidth: 1, borderTopColor: '#EEEEEE', borderStyle: 'dashed' },
-  stampText: { fontSize: 12, fontWeight: '700', color: '#999', textTransform: 'uppercase', letterSpacing: 2 },
-  stampDate: { fontSize: 12, color: '#999', marginTop: 4 }
+  questionBox: { backgroundColor: 'white', padding: 15, borderRadius: 12 },
+  questionText: { fontSize: 14, color: colors.text, marginBottom: 10, lineHeight: 22 },
+  
+  exportBtn: { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, borderRadius: 20, boxShadow: '0px 8px 20px rgba(255, 141, 161, 0.35)' },
+  exportBtnText: { color: 'white', fontSize: 16, fontWeight: 'bold', marginLeft: 10 },
+  noteText: { textAlign: 'center', color: colors.textMuted, fontSize: 12, marginTop: 15, paddingHorizontal: 20, lineHeight: 18 }
 });
