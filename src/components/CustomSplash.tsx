@@ -16,10 +16,10 @@ export default function CustomSplash() {
       useNativeDriver: true,
     }).start();
 
-    // Dòng chữ "for embeiu" hiện lên thật chậm, rõ dần dần (2s)
+    // Dòng chữ "for embeiu" hiện lên (1s)
     Animated.timing(textOpacityValue, {
       toValue: 1,
-      duration: 2000,
+      duration: 1000,
       useNativeDriver: true,
     }).start();
 
