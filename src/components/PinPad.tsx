@@ -13,6 +13,11 @@ interface PinPadProps {
 
 export default function PinPad({ title = 'Nhập mã PIN', subtitle = 'Vui lòng nhập mã PIN 4 số', onComplete, onCancel, error }: PinPadProps) {
   const [pin, setPin] = useState<string>('');
+  const [localError, setLocalError] = useState<string | undefined>('');
+
+  useEffect(() => {
+    setLocalError(error);
+  }, [error]);
 
   useEffect(() => {
     if (pin.length === 4) {
@@ -26,6 +31,7 @@ export default function PinPad({ title = 'Nhập mã PIN', subtitle = 'Vui lòng
   }, [pin, onComplete]);
 
   const handlePress = (digit: string) => {
+    if (localError) setLocalError('');
     if (pin.length < 4) {
       if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
       setPin(prev => prev + digit);
@@ -33,6 +39,7 @@ export default function PinPad({ title = 'Nhập mã PIN', subtitle = 'Vui lòng
   };
 
   const handleDelete = () => {
+    if (localError) setLocalError('');
     if (pin.length > 0) {
       if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
       setPin(prev => prev.slice(0, -1));
@@ -51,12 +58,12 @@ export default function PinPad({ title = 'Nhập mã PIN', subtitle = 'Vui lòng
         <Feather name="lock" size={40} color={colors.primary} style={{ marginBottom: 20 }} />
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
-        {error ? <Text style={styles.errorText}>{error}</Text> : <View style={{ height: 20 }} />}
+        {localError ? <Text style={styles.errorText}>{localError}</Text> : <View style={{ height: 20 }} />}
       </View>
 
       <View style={styles.dotsContainer}>
         {[0, 1, 2, 3].map((i) => (
-          <View key={i} style={[styles.dot, pin.length > i && styles.dotFilled, !!error && styles.dotError]} />
+          <View key={i} style={[styles.dot, pin.length > i && styles.dotFilled, !!localError && styles.dotError]} />
         ))}
       </View>
 
