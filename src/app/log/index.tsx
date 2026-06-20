@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, Dimensions, Animated, ActivityIndicator, Alert, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState, useRef, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../theme/colors';
@@ -37,6 +37,9 @@ const energyLevels = [{label: 'Thấp', score: 1, icon: 'battery'}, {label: 'V�
 
 export default function LogToday() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const logDate = params.date ? (params.date as string) : new Date().toISOString().split('T')[0];
+
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [selectedFlow, setSelectedFlow] = useState<string | null>(null);
@@ -72,6 +75,46 @@ export default function LogToday() {
 
   const profile = useProfileStore(state => state.profile);
 
+  useEffect(() => {
+    if (profile?.uid && logDate !== new Date().toISOString().split('T')[0]) {
+      // Load old log if editing past day
+      supabase
+        .from('daily_logs')
+        .select('*')
+        .eq('user_id', profile.uid)
+        .eq('log_date', logDate)
+        .single()
+        .then(({ data }) => {
+          if (data) {
+            setIsPeriodDay(data.is_period_day || false);
+            setSelectedFlow(data.flow_level || null);
+            setFlowColor(data.flow_color || null);
+            setHasBloodClots(data.has_blood_clots || false);
+            if (data.moods && data.moods.length > 0) setSelectedMood(data.moods[0]);
+            if (data.symptoms) setSelectedSymptoms(data.symptoms);
+            if (data.water_cups) setWaterCups(data.water_cups);
+            if (data.sleep_hours) setSleepHours(data.sleep_hours.toString());
+            if (data.pain_score) setPainScore(data.pain_score);
+            if (data.pain_locations) setPainLocations(data.pain_locations);
+            if (data.energy_score) setEnergyScore(data.energy_score);
+            if (data.notes) setNotes(data.notes);
+            if (data.photo_url) setPhotoUrl(data.photo_url);
+            
+            if (data.ovulation_signs) {
+              setBbt(data.ovulation_signs.bbt || '');
+              setCervicalMucus(data.ovulation_signs.cervicalMucus || null);
+              setLhTest(data.ovulation_signs.lhTest || null);
+            }
+            if (data.medications) {
+              setMedicationName(data.medications.name || '');
+              setMedicationDose(data.medications.dose || '');
+              setMedicationTime(data.medications.time || '');
+            }
+          }
+        });
+    }
+  }, [logDate, profile?.uid]);
+
   const handleSave = async () => {
     if (!profile?.uid) {
       alert('Vui lòng đăng nhập để lưu dữ liệu!');
@@ -79,11 +122,9 @@ export default function LogToday() {
     }
     
     try {
-      const today = new Date().toISOString().split('T')[0];
-      
       const payload: any = {
         user_id: profile.uid,
-        log_date: today,
+        log_date: logDate,
         is_period_day: isPeriodDay,
         flow_level: selectedFlow,
         flow_color: flowColor,
@@ -254,18 +295,19 @@ export default function LogToday() {
     } finally {
       setIsUploadingPhoto(false);
     }
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={handleBack} style={styles.backButton}>
-          <Feather name="chevron-left" size={28} color={colors.text} />
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Feather name="x" size={28} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Ghi nhận hôm nay</Text>
-        <View style={{width: 40}} />
+        <Text style={styles.headerTitle}>
+          {logDate === new Date().toISOString().split('T')[0] ? 'Hôm nay thế nào?' : `Ghi chú ngày ${new Date(logDate).toLocaleDateString('vi-VN')}`}
+        </Text>
+        <Pressable onPress={handleSave} style={styles.saveBtn}>
+          <Text style={styles.saveBtnText}>Lưu</Text>
+        </Pressable>
       </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         <View style={styles.section}>

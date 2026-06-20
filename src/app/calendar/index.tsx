@@ -264,13 +264,43 @@ export default function Calendar() {
                 
                 {selectedLog.sleep_hours !== null && (
                   <View style={styles.modalRow}>
-                    <Feather name="moon" size={20} color="#9C27B0" />
-                    <Text style={styles.modalRowText}>Ngủ: {selectedLog.sleep_hours} giờ</Text>
+                    <Feather name="moon" size={20} color="#7B1FA2" />
+                    <Text style={styles.modalRowText}>Ngủ {selectedLog.sleep_hours} tiếng</Text>
                   </View>
                 )}
+
+                {selectedLog.notes && (
+                  <View style={[styles.modalRow, {alignItems: 'flex-start'}]}>
+                    <Feather name="file-text" size={20} color={colors.textMuted} />
+                    <Text style={[styles.modalRowText, {flex: 1, fontStyle: 'italic', color: colors.textMuted}]}>{selectedLog.notes}</Text>
+                  </View>
+                )}
+
+                <Pressable 
+                  style={{ backgroundColor: colors.primaryLight + '20', padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 20 }}
+                  onPress={() => {
+                    setModalVisible(false);
+                    router.push(`/log?date=${selectedDateStr}`);
+                  }}
+                >
+                  <Text style={{ color: colors.primaryDark, fontWeight: '700' }}>Sửa Ghi Chú Ngày Này</Text>
+                </Pressable>
               </ScrollView>
             ) : (
-              <Text style={{ textAlign: 'center', marginTop: 20, color: colors.textMuted }}>Chưa có nhật ký sức khỏe nào.</Text>
+              <View style={styles.emptyLogBox}>
+                <Feather name="file-minus" size={40} color={colors.border} style={{marginBottom: 10}}/>
+                <Text style={styles.emptyLogText}>Bạn chưa ghi chép gì vào ngày này.</Text>
+                
+                <Pressable 
+                  style={{ backgroundColor: colors.primary, padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 20, width: '100%' }}
+                  onPress={() => {
+                    setModalVisible(false);
+                    router.push(`/log?date=${selectedDateStr}`);
+                  }}
+                >
+                  <Text style={{ color: 'white', fontWeight: '700' }}>Ghi Nhận Ngay</Text>
+                </Pressable>
+              </View>
             )}
           </View>
         </View>
