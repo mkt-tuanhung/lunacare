@@ -53,12 +53,14 @@ interface ProfileState {
     partnerId?: string; // ID của vợ nếu người này là chồng
     isAppLockEnabled?: boolean;
     appLockPin?: string;
+    panicPin?: string;
     hideNotifications?: boolean;
   } | null;
   setProfile: (profile: any) => void;
   updateHealthProfile: (data: Partial<HealthProfile>) => void;
   updateAvatarUrl: (url: string) => void;
   setAppLockEnabled: (enabled: boolean, pin?: string) => void;
+  setPanicPin: (pin: string) => void;
   setHideNotifications: (hide: boolean) => void;
   saveProfileToSupabase: () => Promise<void>;
 }
@@ -105,6 +107,18 @@ export const useProfileStore = create<ProfileState>()(
     });
     get().saveProfileToSupabase();
   },
+  setPanicPin: (pin) => {
+    set((state) => {
+      if (!state.profile) return state;
+      return {
+        profile: {
+          ...state.profile,
+          panicPin: pin
+        }
+      };
+    });
+    get().saveProfileToSupabase();
+  },
   setHideNotifications: (hide) => {
     set((state) => {
       if (!state.profile) return state;
@@ -129,6 +143,7 @@ export const useProfileStore = create<ProfileState>()(
       appSettings: {
         isAppLockEnabled: profile.isAppLockEnabled,
         appLockPin: profile.appLockPin,
+        panicPin: profile.panicPin,
         hideNotifications: profile.hideNotifications
       },
       periodEvents: useCycleStore.getState().periodEvents

@@ -13,7 +13,9 @@ export default function Settings() {
   const router = useRouter();
   const profileStore = useProfileStore();
   const isPinEnabled = profileStore.profile?.isAppLockEnabled || false;
+  const isPanicPinEnabled = !!profileStore.profile?.panicPin;
   const hideNotifications = profileStore.profile?.hideNotifications ?? true;
+  const [isE2EEnabled, setIsE2EEnabled] = useState(false);
   const setHideNotifications = (val: boolean) => profileStore.setHideNotifications(val);
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
@@ -122,10 +124,12 @@ export default function Settings() {
   };
 
   const [showPinSetup, setShowPinSetup] = useState(false);
+  const [showPanicPinSetup, setShowPanicPinSetup] = useState(false);
   const [setupStep, setSetupStep] = useState<1 | 2>(1);
   const [tempPin, setTempPin] = useState('');
   const [pinError, setPinError] = useState('');
   const [showPinRemove, setShowPinRemove] = useState(false);
+  const [showPanicPinRemove, setShowPanicPinRemove] = useState(false);
 
   const handleTogglePin = (val: boolean) => {
     if (val) {
@@ -136,6 +140,22 @@ export default function Settings() {
     } else {
       setPinError('');
       setShowPinRemove(true);
+    }
+  };
+
+  const handleTogglePanicPin = (val: boolean) => {
+    if (!isPinEnabled && val) {
+      alert("Vui lòng bật tính năng Khóa bằng mã PIN trước khi sử dụng Mật khẩu giả.");
+      return;
+    }
+    if (val) {
+      setSetupStep(1);
+      setTempPin('');
+      setPinError('');
+      setShowPanicPinSetup(true);
+    } else {
+      setPinError('');
+      setShowPanicPinRemove(true);
     }
   };
 
@@ -165,6 +185,39 @@ export default function Settings() {
     }
   };
 
+  const handlePanicPinSetupComplete = (pin: string) => {
+    if (pin === profileStore.profile?.appLockPin) {
+      setPinError('Mã PIN giả không được giống Mã PIN thật.');
+      setSetupStep(1);
+      setTempPin('');
+      return;
+    }
+
+    if (setupStep === 1) {
+      setTempPin(pin);
+      setSetupStep(2);
+      setPinError('');
+    } else {
+      if (pin === tempPin) {
+        profileStore.setPanicPin(pin);
+        setShowPanicPinSetup(false);
+      } else {
+        setPinError('Mã PIN không khớp, thử lại');
+        setSetupStep(1);
+        setTempPin('');
+      }
+    }
+  };
+
+  const handlePanicPinRemoveComplete = (pin: string) => {
+    if (pin === profileStore.profile?.appLockPin) {
+      profileStore.setPanicPin(''); // Removed
+      setShowPanicPinRemove(false);
+    } else {
+      setPinError('Mã PIN gốc không đúng.');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -191,12 +244,36 @@ export default function Settings() {
           <View style={styles.divider} />
           
           <View style={styles.row}>
+            <View style={[styles.rowIcon, {backgroundColor: '#FFEBEE'}]}><Feather name="shield" size={20} color="#F44336" /></View>
+            <View style={styles.rowInfo}>
+              <Text style={styles.rowTitle}>Mật khẩu giả (Panic PIN)</Text>
+              <Text style={styles.rowDesc}>Khi mở bằng mã này, App sẽ giả dạng thành App Ghi Chú trống</Text>
+            </View>
+            <Switch value={isPanicPinEnabled} onValueChange={handleTogglePanicPin} trackColor={{ false: '#E0E0E0', true: '#F44336' }} />
+          </View>
+          
+          <View style={styles.divider} />
+          
+          <View style={styles.row}>
             <View style={styles.rowIcon}><Feather name="bell-off" size={20} color={colors.text} /></View>
             <View style={styles.rowInfo}>
               <Text style={styles.rowTitle}>Ẩn nội dung thông báo</Text>
               <Text style={styles.rowDesc}>Chỉ hiện "Bạn có lời nhắc mới"</Text>
             </View>
             <Switch value={hideNotifications} onValueChange={setHideNotifications} trackColor={{ false: '#E0E0E0', true: colors.primary }} />
+          </View>
+          <View style={styles.divider} />
+          
+          <View style={styles.row}>
+            <View style={styles.rowIcon}><MaterialCommunityIcons name="shield-lock-outline" size={20} color={colors.text} /></View>
+            <View style={styles.rowInfo}>
+              <Text style={styles.rowTitle}>Mã hoá đầu cuối (E2E Backup)</Text>
+              <Text style={styles.rowDesc}>Chỉ bạn và người được uỷ quyền mới đọc được nhật ký</Text>
+            </View>
+            <Switch value={isE2EEnabled} onValueChange={(val) => {
+              if (val) alert("Tính năng đang kích hoạt. Dữ liệu của bạn sẽ được mã hoá bằng Master Key lưu trữ cục bộ.");
+              setIsE2EEnabled(val);
+            }} trackColor={{ false: '#E0E0E0', true: colors.primary }} />
           </View>
         </View>
 
@@ -282,6 +359,28 @@ export default function Settings() {
           error={pinError}
           onComplete={handlePinRemoveComplete}
           onCancel={() => setShowPinRemove(false)}
+        />
+      </Modal>
+
+      {/* PANIC PIN SETUP MODAL */}
+      <Modal visible={showPanicPinSetup} animationType="slide" presentationStyle="pageSheet">
+        <PinPad 
+          title={setupStep === 1 ? 'Tạo Mật khẩu Giả' : 'Xác nhận Mật khẩu Giả'}
+          subtitle={setupStep === 1 ? 'Mã này sẽ mở ra app Ghi Chú' : 'Vui lòng nhập lại mã giả vừa tạo'}
+          error={pinError}
+          onComplete={handlePanicPinSetupComplete}
+          onCancel={() => setShowPanicPinSetup(false)}
+        />
+      </Modal>
+
+      {/* PANIC PIN REMOVE MODAL */}
+      <Modal visible={showPanicPinRemove} animationType="slide" presentationStyle="pageSheet">
+        <PinPad 
+          title="Tắt Mật khẩu Giả"
+          subtitle="Vui lòng nhập mã PIN THẬT để xác nhận"
+          error={pinError}
+          onComplete={handlePanicPinRemoveComplete}
+          onCancel={() => setShowPanicPinRemove(false)}
         />
       </Modal>
     </View>

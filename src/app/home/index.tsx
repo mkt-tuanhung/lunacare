@@ -139,31 +139,31 @@ export default function Home() {
   const rippleAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Breathing animation for the central circle
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.03,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        })
+      ])
+    ).start();
+
     if (isPredicting) {
       Animated.loop(
-        Animated.parallel([
-          Animated.sequence([
-            Animated.timing(scaleAnim, {
-              toValue: 1.05,
-              duration: 800,
-              useNativeDriver: true,
-            }),
-            Animated.timing(scaleAnim, {
-              toValue: 1,
-              duration: 800,
-              useNativeDriver: true,
-            })
-          ]),
-          Animated.timing(rippleAnim, {
-            toValue: 1,
-            duration: 1600,
-            useNativeDriver: true,
-          })
-        ])
+        Animated.timing(rippleAnim, {
+          toValue: 1,
+          duration: 1600,
+          useNativeDriver: true,
+        })
       ).start();
     } else {
-      scaleAnim.stopAnimation();
-      scaleAnim.setValue(1);
       rippleAnim.stopAnimation();
       rippleAnim.setValue(0);
     }
@@ -337,6 +337,14 @@ export default function Home() {
           <Text style={styles.sectionTitle}>Thông tin hàng ngày • Hôm nay</Text>
           
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 15 }}>
+            {/* Chăm sóc bản thân */}
+            <Pressable style={[styles.insightCard, { backgroundColor: '#FCE4EC', borderColor: '#F8BBD0' }]} onPress={() => router.push('/care')}>
+              <Text style={[styles.insightTitle, { color: '#C2185B' }]}>Trung tâm{'\n'}Chăm sóc</Text>
+              <View style={[styles.addIcon, { backgroundColor: '#E91E63' }]}>
+                <Feather name="heart" size={18} color="white" />
+              </View>
+            </Pressable>
+
             {/* Sửa chu kỳ */}
             <Pressable style={[styles.insightCard, { backgroundColor: '#FFF0F3', borderColor: '#FFE4E8' }]} onPress={() => router.push('/calendar')}>
               <Text style={styles.insightTitle}>Thay đổi{'\n'}chu kỳ</Text>

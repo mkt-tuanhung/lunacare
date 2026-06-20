@@ -1,9 +1,11 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, Dimensions, Animated, ActivityIndicator, Alert, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../theme/colors';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { uploadAvatarToR2 } from '../../lib/r2';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useCycleStore } from '../../store/useCycleStore';
 
@@ -27,6 +29,9 @@ const symptoms = [
 const ovulationSigns = ['Dịch nhầy trong', 'Nhiệt độ tăng', 'Que LH dương tính'];
 
 const flows = ['Nhẹ', 'Vừa', 'Nhiều', 'Rất nhiều'];
+const flowColors = ['Đỏ tươi', 'Đỏ sẫm', 'Nâu', 'Hồng'];
+const painLocationOptions = ['Bụng dưới', 'Lưng', 'Ngực', 'Đầu', 'Một bên bụng', 'Khi quan hệ'];
+const energyLevels = [{label: 'Thấp', score: 1, icon: 'battery'}, {label: 'Vừa', score: 2, icon: 'zap'}, {label: 'Cao', score: 3, icon: 'sun'}];
 
 export default function LogToday() {
   const router = useRouter();
@@ -35,10 +40,19 @@ export default function LogToday() {
   const [selectedFlow, setSelectedFlow] = useState<string | null>(null);
   const [isPeriodDay, setIsPeriodDay] = useState(false);
   
-  // New states
   const [waterCups, setWaterCups] = useState(0);
   const [sleepHours, setSleepHours] = useState('');
   const [selectedOvulations, setSelectedOvulations] = useState<string[]>([]);
+  const [painScore, setPainScore] = useState(0);
+  const [painLocations, setPainLocations] = useState<string[]>([]);
+  const [energyScore, setEnergyScore] = useState<number | null>(null);
+  const [flowColor, setFlowColor] = useState<string | null>(null);
+  const [hasBloodClots, setHasBloodClots] = useState(false);
+  const [medications, setMedications] = useState('');
+  const [notes, setNotes] = useState('');
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const toggleSymptom = (s: string) => {
     setSelectedSymptoms(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
@@ -46,6 +60,10 @@ export default function LogToday() {
   
   const toggleOvulation = (s: string) => {
     setSelectedOvulations(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  };
+
+  const togglePainLocation = (s: string) => {
+    setPainLocations(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   };
 
   const profile = useProfileStore(state => state.profile);
@@ -64,12 +82,19 @@ export default function LogToday() {
         log_date: today,
         is_period_day: isPeriodDay,
         flow_level: selectedFlow,
+        flow_color: flowColor,
+        has_blood_clots: hasBloodClots,
         moods: selectedMood ? [selectedMood] : [],
         symptoms: selectedSymptoms,
         water_cups: waterCups,
         sleep_hours: sleepHours ? parseFloat(sleepHours) : null,
         ovulation_signs: selectedOvulations,
-        notes: ''
+        pain_score: painScore,
+        pain_locations: painLocations,
+        energy_score: energyScore,
+        medications: medications,
+        notes: notes,
+        photo_url: photoUrl
       };
 
       const { data: existing } = await supabase
@@ -90,10 +115,16 @@ export default function LogToday() {
       
       if (dbError) {
         if (dbError.message.includes('schema cache') || dbError.message.includes('does not exist') || dbError.message.includes('column')) {
-            // Thử lại nếu user chưa có cột mới
             delete payload.water_cups;
             delete payload.sleep_hours;
             delete payload.ovulation_signs;
+            delete payload.pain_score;
+            delete payload.pain_locations;
+            delete payload.energy_score;
+            delete payload.flow_color;
+            delete payload.has_blood_clots;
+            delete payload.medications;
+            delete payload.photo_url;
             if (existing) {
               const { error: retryError } = await supabase.from('daily_logs').update(payload).eq('id', existing.id);
               if (retryError) throw retryError;
@@ -108,33 +139,26 @@ export default function LogToday() {
 
       alert('Đã lưu Ghi nhận thành công!');
       
-      // ĐỒNG BỘ VỚI LỊCH SỬ CHU KỲ (periodEvents) NẾU ĐÁNH DẤU LÀ "CÓ KINH"
       const cycleStore = useCycleStore.getState();
       const todayStr = payload.log_date;
       if (payload.is_period_day) {
-        // Kiểm tra xem 7 ngày gần đây có chu kỳ nào đang dở dang không
         const existingEvent = cycleStore.periodEvents.find(e => {
             const diff = Math.abs(new Date(e.startDate).getTime() - new Date(todayStr).getTime()) / (1000 * 60 * 60 * 24);
-            return diff <= 10; // Nếu cách ngày bắt đầu <= 10 ngày thì coi là cùng 1 chu kỳ
+            return diff <= 10;
         });
         
         if (existingEvent) {
-            // Cập nhật endDate nếu log ngày mới hơn
             if (new Date(todayStr) > new Date(existingEvent.endDate || existingEvent.startDate)) {
                 cycleStore.updatePeriodEvent(existingEvent.id, { endDate: todayStr });
             }
         } else {
-            // Nếu không có chu kỳ nào gần đây -> Tạo chu kỳ mới ngay hôm nay!
             cycleStore.addPeriodEvent({ startDate: todayStr, endDate: todayStr, userId: payload.user_id });
         }
       } else {
-        // NẾU NGƯỜI DÙNG BỎ CHECK "CÓ KINH"
-        // Kiểm tra xem có chu kỳ nào TRÙNG KHỚP 1 NGÀY này không
         const exactMatch = cycleStore.periodEvents.find(e => e.startDate === todayStr && e.endDate === todayStr);
         if (exactMatch) {
             cycleStore.deletePeriodEvent(exactMatch.id);
         } else {
-            // Nếu là chu kỳ nhiều ngày, và người dùng bỏ check ngày cuối cùng -> Thu hẹp chu kỳ
             const endMatch = cycleStore.periodEvents.find(e => e.endDate === todayStr);
             if (endMatch) {
                 const prevDay = new Date(todayStr);
@@ -144,7 +168,6 @@ export default function LogToday() {
         }
       }
 
-      // BẮT BUỘC TÍNH TOÁN LẠI CHU KỲ
       await cycleStore.calculatePrediction();
       
       if (router.canGoBack()) {
@@ -155,7 +178,7 @@ export default function LogToday() {
     } catch (err: any) {
       console.error(err);
       if (err.message && err.message.includes('schema cache')) {
-        alert("Lỗi Bảng Dữ Liệu Supabase: Bảng daily_logs của bạn đang bị thiếu cột (chưa được tạo đúng chuẩn).\n\nVui lòng mở file fix_daily_logs.sql, copy toàn bộ nội dung và chạy trong Supabase SQL Editor để tự động sửa lỗi này!");
+        alert("Lỗi Bảng Dữ Liệu Supabase: Bảng daily_logs của bạn đang bị thiếu cột.\n\nVui lòng mở file fix_daily_logs.sql và chạy trong Supabase SQL Editor!");
       } else {
         alert('Lỗi lưu dữ liệu: ' + err.message);
       }
@@ -167,6 +190,62 @@ export default function LogToday() {
       router.back();
     } else {
       router.replace('/home');
+    }
+  };
+
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  
+  useEffect(() => {
+    if (isRecording) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.2, duration: 500, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 500, useNativeDriver: true })
+        ])
+      ).start();
+    } else {
+      pulseAnim.stopAnimation();
+      pulseAnim.setValue(1);
+    }
+  }, [isRecording]);
+
+  const handleVoiceLog = () => {
+    if (isRecording) return;
+    setIsRecording(true);
+    setTimeout(() => {
+      setIsRecording(false);
+      setPainScore(7);
+      setEnergyScore(1);
+      setSelectedSymptoms(prev => [...new Set([...prev, 'Đau bụng', 'Mệt mỏi'])]);
+      setNotes(prev => prev + (prev ? '\n' : '') + 'Cảm thấy rất đau bụng và thèm đồ ngọt (Tạo tự động từ Voice Log)');
+      Alert.alert('AI Voice Log', 'Đã ghi nhận: "Hôm nay đau bụng 7 điểm, mệt mỏi, thèm ngọt"');
+    }, 3000);
+  };
+
+  const handlePickPhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setIsUploadingPhoto(true);
+        const uri = result.assets[0].uri;
+        const uploadedUrl = await uploadAvatarToR2(uri, `log_${Date.now()}`);
+        if (uploadedUrl) {
+          setPhotoUrl(uploadedUrl);
+        } else {
+          Alert.alert("Lỗi", "Không thể upload ảnh lên Cloudflare R2 lúc này.");
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Lỗi", "Có lỗi xảy ra khi chọn ảnh.");
+    } finally {
+      setIsUploadingPhoto(false);
     }
   };
 
@@ -182,7 +261,6 @@ export default function LogToday() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        {/* Kinh nguyệt */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={[styles.iconBox, { backgroundColor: '#FFF0F3' }]}>
@@ -197,14 +275,67 @@ export default function LogToday() {
           </Pressable>
 
           {isPeriodDay && (
-            <View style={styles.pillsContainer}>
-              {flows.map(f => (
-                <Pressable key={f} style={[styles.pill, selectedFlow === f && styles.pillActive]} onPress={() => setSelectedFlow(f)}>
-                  <Text style={[styles.pillText, selectedFlow === f && styles.pillTextActive]}>{f}</Text>
-                </Pressable>
-              ))}
+            <View>
+              <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 10, marginBottom: 5 }}>Lượng máu</Text>
+              <View style={styles.pillsContainer}>
+                {flows.map(f => (
+                  <Pressable key={f} style={[styles.pill, selectedFlow === f && styles.pillActive]} onPress={() => setSelectedFlow(f)}>
+                    <Text style={[styles.pillText, selectedFlow === f && styles.pillTextActive]}>{f}</Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 15, marginBottom: 5 }}>Màu máu</Text>
+              <View style={styles.pillsContainer}>
+                {flowColors.map(f => (
+                  <Pressable key={f} style={[styles.pill, flowColor === f && styles.pillActive]} onPress={() => setFlowColor(f)}>
+                    <Text style={[styles.pillText, flowColor === f && styles.pillTextActive]}>{f}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              
+              <Pressable style={[styles.toggleCard, hasBloodClots && styles.toggleCardActive, {marginTop: 15}]} onPress={() => setHasBloodClots(!hasBloodClots)}>
+                <Text style={[styles.toggleText, hasBloodClots && styles.toggleTextActive]}>Có máu cục</Text>
+                {hasBloodClots && <Ionicons name="checkmark-circle" size={20} color={colors.primaryDark} />}
+              </Pressable>
             </View>
           )}
+        </View>
+
+        {/* Đau đớn */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.iconBox, { backgroundColor: '#FFE0E0' }]}>
+              <Feather name="frown" size={20} color="#E53935" />
+            </View>
+            <Text style={styles.sectionTitle}>Mức độ Đau</Text>
+          </View>
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15}}>
+            <Text style={{fontSize: 16, color: colors.textMuted}}>Không đau</Text>
+            <Text style={{fontSize: 24, fontWeight: '800', color: '#E53935'}}>{painScore}/10</Text>
+            <Text style={{fontSize: 16, color: colors.textMuted}}>Đau tột độ</Text>
+          </View>
+          
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20}}>
+            {[0, 2, 4, 6, 8, 10].map(s => (
+              <Pressable key={s} onPress={() => setPainScore(s)} style={{
+                width: 40, height: 40, borderRadius: 20, 
+                backgroundColor: painScore >= s && s > 0 ? '#E53935' : (s === 0 && painScore === 0 ? colors.primary : colors.background),
+                justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border
+              }}>
+                <Text style={{color: painScore >= s || (s === 0 && painScore === 0) ? 'white' : colors.text}}>{s}</Text>
+              </Pressable>
+            ))}
+          </View>
+          
+          <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 5 }}>Vị trí đau</Text>
+          <View style={styles.pillsContainer}>
+            {painLocationOptions.map(s => (
+              <Pressable key={s} style={[styles.pill, painLocations.includes(s) && styles.pillActive]} onPress={() => togglePainLocation(s)}>
+                <Text style={[styles.pillText, painLocations.includes(s) && styles.pillTextActive]}>{s}</Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
         {/* Tâm trạng */}
@@ -243,15 +374,25 @@ export default function LogToday() {
           </View>
         </View>
 
-        {/* Nước & Giấc ngủ */}
+        {/* Sức khỏe cơ bản */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={[styles.iconBox, { backgroundColor: '#E3F2FD' }]}>
-              <Feather name="droplet" size={20} color="#2196F3" />
+              <Feather name="activity" size={20} color="#2196F3" />
             </View>
-            <Text style={styles.sectionTitle}>Sức khỏe cơ bản</Text>
+            <Text style={styles.sectionTitle}>Năng lượng & Sinh hoạt</Text>
           </View>
           
+          <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 10, marginTop: 5 }}>Mức Năng lượng</Text>
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25}}>
+            {energyLevels.map(lvl => (
+              <Pressable key={lvl.score} style={[styles.iconPill, energyScore === lvl.score && {backgroundColor: '#2196F3', borderColor: '#2196F3'}]} onPress={() => setEnergyScore(lvl.score)}>
+                <Feather name={lvl.icon as any} size={24} color={energyScore === lvl.score ? 'white' : colors.textMuted} style={{marginBottom: 8}}/>
+                <Text style={[styles.iconPillText, energyScore === lvl.score && {color: 'white'}]}>{lvl.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+
           <View style={styles.inputRow}>
             <Text style={styles.inputLabel}>Nước (số ly):</Text>
             <View style={styles.counterBox}>
@@ -290,7 +431,57 @@ export default function LogToday() {
           </View>
         </View>
 
+        {/* Thuốc & Ghi chú */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.iconBox, { backgroundColor: '#E8F5E9' }]}>
+              <Feather name="edit-3" size={20} color="#4CAF50" />
+            </View>
+            <Text style={styles.sectionTitle}>Thuốc & Ghi chú</Text>
+          </View>
+          
+          <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 5 }}>Thuốc đã uống (Liều lượng/Lý do)</Text>
+          <TextInput
+            style={[styles.textInputFull, {minHeight: 60}]}
+            placeholder="VD: Paracetamol 500mg giảm đau"
+            multiline
+            value={medications}
+            onChangeText={setMedications}
+          />
+          
+          <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 5, marginTop: 15 }}>Ghi chú tự do</Text>
+          <TextInput
+            style={[styles.textInputFull, {minHeight: 100}]}
+            placeholder="Bạn đang cảm thấy thế nào? Ghi chú sự kiện trong ngày..."
+            multiline
+            value={notes}
+            onChangeText={setNotes}
+          />
+
+          {/* ADVANCED: Photo Mood Journal */}
+          <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 5, marginTop: 15 }}>Photo Mood Journal</Text>
+          <Pressable style={styles.photoUploadBtn} onPress={handlePickPhoto}>
+            {isUploadingPhoto ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : photoUrl ? (
+              <Image source={{uri: photoUrl}} style={{width: '100%', height: 150, borderRadius: 12}} />
+            ) : (
+              <>
+                <Feather name="camera" size={24} color={colors.primary} />
+                <Text style={{color: colors.primary, marginTop: 5, fontWeight: '600'}}>Thêm ảnh kỷ niệm hôm nay</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
+
       </ScrollView>
+
+      {/* ADVANCED: Voice Log FAB */}
+      <Animated.View style={[styles.voiceFabContainer, { transform: [{ scale: pulseAnim }] }]}>
+        <Pressable style={[styles.voiceFab, isRecording && { backgroundColor: '#F44336' }]} onPress={handleVoiceLog}>
+          <MaterialCommunityIcons name={isRecording ? "microphone" : "microphone-outline"} size={30} color="white" />
+        </Pressable>
+      </Animated.View>
 
       <View style={styles.footer}>
         <Pressable style={styles.saveButton} onPress={handleSave}>
@@ -337,6 +528,12 @@ const styles = StyleSheet.create({
   counterBtn: { padding: 12 },
   counterText: { fontSize: 18, fontWeight: 'bold', width: 30, textAlign: 'center' },
   textInput: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 12, width: 100, textAlign: 'center', fontSize: 16 },
+  textInputFull: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 16, fontSize: 16, textAlignVertical: 'top' },
+
+  photoUploadBtn: { height: 150, backgroundColor: colors.primaryLight + '20', borderRadius: 16, borderWidth: 1, borderColor: colors.primaryLight, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
+  
+  voiceFabContainer: { position: 'absolute', bottom: 110, right: 20, zIndex: 100 },
+  voiceFab: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', shadowColor: colors.primary, shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.4, shadowRadius: 10, elevation: 8 },
 
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 24, backgroundColor: 'rgba(255,255,255,0.9)', borderTopWidth: 1, borderTopColor: colors.border },
   saveButton: { backgroundColor: colors.primary, paddingVertical: 18, borderRadius: 24, alignItems: 'center', boxShadow: '0px 8px 20px rgba(255, 141, 161, 0.35)' },

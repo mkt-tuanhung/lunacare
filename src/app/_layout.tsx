@@ -5,6 +5,7 @@ import { useProfileStore } from '../store/useProfileStore';
 import { View, Text, AppState, StyleSheet, Pressable, Modal } from 'react-native';
 import CustomSplash from '../components/CustomSplash';
 import PinPad from '../components/PinPad';
+import FakeNotesApp from '../components/FakeNotesApp';
 import { Feather } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
@@ -13,6 +14,7 @@ export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
+  const [showFakeNotes, setShowFakeNotes] = useState(false);
   const appState = useRef(AppState.currentState);
   const profile = useProfileStore((state) => state.profile);
 
@@ -22,6 +24,10 @@ export default function RootLayout() {
     const currentProfile = useProfileStore.getState().profile;
     if (pin === currentProfile?.appLockPin) {
       setIsLocked(false);
+      setPinError('');
+    } else if (currentProfile?.panicPin && pin === currentProfile.panicPin) {
+      setIsLocked(false);
+      setShowFakeNotes(true);
       setPinError('');
     } else {
       setPinError('Mã PIN không đúng, thử lại');
@@ -76,6 +82,10 @@ export default function RootLayout() {
         />
       </Modal>
     );
+  }
+
+  if (showFakeNotes) {
+    return <FakeNotesApp />;
   }
 
   // Bảo vệ route toàn cầu (Global Guard)
