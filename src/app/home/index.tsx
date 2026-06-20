@@ -7,7 +7,7 @@ import { colors } from '../../theme/colors';
 import { Feather, Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { uploadAvatarToR2 } from '../../lib/r2';
+import { uploadImageToR2 } from '../../lib/r2';
 import { scheduleSleepProtection, scheduleSmartGrocery } from '../../lib/notifications';
 import { useAlertStore } from '../../store/useAlertStore';
 import LottieView from 'lottie-react-native';
@@ -214,7 +214,7 @@ export default function Home() {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setIsUploading(true);
         const uri = result.assets[0].uri;
-        const uploadedUrl = await uploadAvatarToR2(uri, profile?.uid || 'guest');
+        const uploadedUrl = await uploadImageToR2(uri, profile?.uid || 'guest', 'avatars');
         if (uploadedUrl) {
           updateAvatarUrl(uploadedUrl);
         } else {
@@ -260,8 +260,7 @@ export default function Home() {
         const uploadedUrls: string[] = [];
         
         for (const asset of result.assets) {
-          // Note: using placeholder uploadImageToR2 since the instruction implied adding it to previous logic
-          const url = await uploadAvatarToR2(asset.uri, profile?.uid || 'guest');
+          const url = await uploadImageToR2(asset.uri, profile?.uid || 'guest', 'albums');
           if (url) uploadedUrls.push(url);
         }
 
