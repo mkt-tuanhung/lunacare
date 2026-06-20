@@ -165,11 +165,15 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
   // PRD 9.2: Next period start = last period start + predicted cycle length.
   let predictedStartDate = addDays(lastCycle.startDate, predictedCycleLength);
   
-  // Nếu ngày dự đoán nằm trong quá khứ, chỉ tua nếu nó đã trễ QUÁ 1 chu kỳ (tức là đã sang chu kỳ tiếp theo)
+  // NẾU TRỄ KINH: Tua từng tháng một để tìm ra ngày kinh dự kiến TIẾP THEO trong tương lai.
+  // Tuy nhiên, nếu "Kỳ kinh dự kiến" HIỆN TẠI vẫn đang là hôm nay hoặc đã trễ ở tháng hiện tại, ta KHÔNG tua qua tháng tiếp theo
+  // Ta chỉ tua qua tháng tiếp theo nếu đã TRỄ NGUYÊN 1 CHU KỲ (tức là hôm nay đã vượt qua ngày đáng lẽ kết thúc của kỳ hiện tại + 1 chu kỳ)
   const today = new Date();
   today.setHours(0,0,0,0);
   let loopCount = 0;
-  // Điều kiện: Ngày dự kiến của kỳ TIẾP THEO NỮA cũng đã ở trong quá khứ thì mới tua
+  
+  // Dùng logic: Ngày hôm nay lớn hơn "ngày dự kiến + cycle length" thì mới tua. 
+  // Ví dụ: Dự kiến 01/06. Chu kỳ 28 ngày. Chỉ tua khi hôm nay là 29/06.
   while (new Date(addDays(predictedStartDate, predictedCycleLength)).getTime() <= today.getTime() && loopCount < 100) { 
       predictedStartDate = addDays(predictedStartDate, predictedCycleLength);
       loopCount++;
