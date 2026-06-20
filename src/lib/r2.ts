@@ -53,8 +53,6 @@ export const uploadAvatarToR2 = async (fileUri: string, userId: string): Promise
     });
 
     if (!uploadRes.ok) {
-      const errText = await uploadRes.text();
-      alert(`R2 Upload Status: ${uploadRes.status} - ${errText}`);
       throw new Error(`Upload failed with status: ${uploadRes.status}`);
     }
 
@@ -68,7 +66,6 @@ export const uploadAvatarToR2 = async (fileUri: string, userId: string): Promise
 
   } catch (error: any) {
     console.error("Lỗi khi upload ảnh lên R2:", error);
-    alert("Lỗi Upload: " + error.message);
     return null;
   }
 };
