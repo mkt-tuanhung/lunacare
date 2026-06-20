@@ -48,23 +48,29 @@ export default function HealthProfileScreen() {
 
     // 2. Lưu lên Supabase
     if (profileStore.profile?.uid) {
-      const { error } = await supabase
+      supabase
         .from('profiles')
         .update({ health_profile: answers })
-        .eq('id', profileStore.profile.uid);
-      if (error) console.error("Lỗi đồng bộ hồ sơ:", error);
+        .eq('id', profileStore.profile.uid)
+        .then(({ error }) => {
+          if (error) console.error("Lỗi đồng bộ hồ sơ:", error);
+        });
     }
-
-    // 3. Tính toán lại chu kỳ bằng AI và Local Engine do Profile đã thay đổi
-    const cycleStore = useCycleStore.getState();
-    await cycleStore.calculatePrediction();
 
     if (Platform.OS === 'web') {
-      alert('Đã cập nhật Hồ sơ Sức khỏe & Tính toán lại chu kỳ!');
+      alert('Đã cập nhật Hồ sơ Sức khỏe!');
     } else {
-      useAlertStore.getState().showAlert('Thành công', 'Hồ sơ đã được cập nhật và Chu kỳ đã được tính toán lại.');
+      useAlertStore.getState().showAlert('Thành công', 'Hồ sơ đã được cập nhật!');
     }
-    router.back();
+    
+    // 3. Trở về trang chủ NGAY LẬP TỨC để show animation
+    router.replace('/home');
+
+    // 4. Bắt đầu kích hoạt tính toán (isPredicting = true) ở dưới background, Home screen sẽ render animation
+    setTimeout(() => {
+      const cycleStore = useCycleStore.getState();
+      cycleStore.calculatePrediction();
+    }, 100);
   };
 
   return (
