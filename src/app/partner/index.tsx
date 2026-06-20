@@ -51,7 +51,7 @@ export default function PartnerMode() {
             </View>
 
             <Text style={styles.sectionTitle}>Quản lý Quyền Truy Cập</Text>
-            <Text style={styles.sectionDesc}>LunaCare đề cao sự riêng tư của bạn. Hãy chọn những thông tin bạn thoải mái chia sẻ với Chồng.</Text>
+            <Text style={styles.sectionDesc}>For Embeiu đề cao sự riêng tư của bạn. Hãy chọn những thông tin bạn thoải mái chia sẻ với Chồng.</Text>
 
             <View style={styles.permissionCard}>
               <View style={styles.permRow}>

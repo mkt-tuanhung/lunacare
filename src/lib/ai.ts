@@ -3,7 +3,7 @@ export async function chatWithAI(message: string, context: any = {}): Promise<{ 
   
   // Chuẩn bị System Prompt cá nhân hóa dựa trên context
   const systemPrompt = `
-Bạn là LunaCare AI - một trợ lý sức khỏe sinh sản, chu kỳ kinh nguyệt và tâm lý gia đình dành cho phụ nữ.
+Bạn là For Embeiu AI - một trợ lý sức khỏe sinh sản, chu kỳ kinh nguyệt và tâm lý gia đình dành cho phụ nữ.
 Tên người dùng: ${context.displayName || 'Vợ Yêu'}.
 Sức khỏe: Mức độ stress (${context.stressLevel || 'Bình thường'}), Triệu chứng hay gặp (${context.worstSymptoms?.join(', ') || 'Không rõ'}).
 Lưu ý quan trọng:

@@ -17,7 +17,7 @@ export default function AIAssistant() {
   const router = useRouter();
   const profile = useProfileStore(state => state.profile);
   const [messages, setMessages] = useState<Message[]>([
-    { id: '1', text: 'Chào bạn, mình là LunaCare AI. Mình có thể giúp gì cho sức khỏe và chu kỳ của bạn hôm nay?', sender: 'ai' }
+    { id: '1', text: 'Chào bạn, mình là For Embeiu AI. Mình có thể giúp gì cho sức khỏe và chu kỳ của bạn hôm nay?', sender: 'ai' }
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -56,7 +56,7 @@ export default function AIAssistant() {
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={28} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>LunaCare AI</Text>
+        <Text style={styles.headerTitle}>For Embeiu AI</Text>
         <View style={styles.backBtn} />
       </View>
 

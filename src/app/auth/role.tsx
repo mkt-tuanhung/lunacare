@@ -16,7 +16,7 @@ export default function RoleSelection() {
           style={{ width: 100, height: 100, borderRadius: 24, marginBottom: 20 }} 
           resizeMode="cover"
         />
-        <Text style={styles.title}>LunaCare</Text>
+        <Text style={styles.title}>For Embeiu</Text>
         <Text style={styles.subtitle}>Hãy chọn vai trò của bạn để bắt đầu</Text>
       </View>
 

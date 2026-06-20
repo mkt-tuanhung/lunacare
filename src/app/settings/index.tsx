@@ -209,11 +209,11 @@ export default function Settings() {
         <View style={styles.disclaimerCard}>
           <Feather name="info" size={24} color={colors.textMuted} style={{ marginBottom: 10 }} />
           <Text style={styles.disclaimerText}>
-            LunaCare chỉ cung cấp thông tin tham khảo và hỗ trợ theo dõi sức khỏe. Ứng dụng không chẩn đoán bệnh, không kê đơn, không thay thế tư vấn y tế chuyên môn. Nếu bạn đau dữ dội, ra máu nhiều bất thường, nghi ngờ mang thai hoặc có triệu chứng khiến bạn lo lắng, hãy liên hệ bác sĩ hoặc cơ sở y tế.
+            For Embeiu chỉ cung cấp thông tin tham khảo và hỗ trợ theo dõi sức khỏe. Ứng dụng không chẩn đoán bệnh, không kê đơn, không thay thế tư vấn y tế chuyên môn. Nếu bạn đau dữ dội, ra máu nhiều bất thường, nghi ngờ mang thai hoặc có triệu chứng khiến bạn lo lắng, hãy liên hệ bác sĩ hoặc cơ sở y tế.
           </Text>
         </View>
 
-        <Text style={styles.versionText}>LunaCare v1.2.0 - Core Engine</Text>
+        <Text style={styles.versionText}>For Embeiu v1.2.0 - Core Engine</Text>
       </ScrollView>
     </View>
   );

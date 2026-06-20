@@ -16,32 +16,32 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@1,200;1,300;1,400&display=swap" rel="stylesheet" />
 
         {/* Cấu hình SEO và Social Preview (Open Graph) */}
-        <title>LunaCare - Yêu Thương & Thấu Hiểu</title>
-        <meta name="description" content="LunaCare là ứng dụng AI thông minh giúp theo dõi chu kỳ, chăm sóc sức khỏe sinh sản và gắn kết tình cảm vợ chồng." />
+        <title>For Embeiu - Yêu Thương & Thấu Hiểu</title>
+        <meta name="description" content="For Embeiu là ứng dụng AI thông minh giúp theo dõi chu kỳ, chăm sóc sức khỏe sinh sản và gắn kết tình cảm vợ chồng." />
         
         {/* PWA & iOS Safari Add to Home Screen */}
         <link rel="icon" type="image/png" href="/icon.png?v=2" />
         <link rel="apple-touch-icon" href="/icon.png?v=2" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="LunaCare" />
+        <meta name="apple-mobile-web-app-title" content="For Embeiu" />
 
         
         {/* Open Graph / Facebook / Zalo */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://lunacare-rho.vercel.app/" />
-        <meta property="og:title" content="LunaCare - Yêu Thương & Thấu Hiểu" />
+        <meta property="og:url" content="https://embeiu.vercel.app/" />
+        <meta property="og:title" content="For Embeiu - Yêu Thương & Thấu Hiểu" />
         <meta property="og:description" content="Ứng dụng AI thông minh giúp theo dõi chu kỳ, chăm sóc sức khỏe sinh sản và gắn kết tình cảm vợ chồng." />
-        <meta property="og:image" content="https://lunacare-rho.vercel.app/icon.png" />
+        <meta property="og:image" content="https://embeiu.vercel.app/icon.png" />
         <meta property="og:image:width" content="1024" />
         <meta property="og:image:height" content="1024" />
 
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://lunacare-rho.vercel.app/" />
-        <meta property="twitter:title" content="LunaCare - Yêu Thương & Thấu Hiểu" />
+        <meta property="twitter:url" content="https://embeiu.vercel.app/" />
+        <meta property="twitter:title" content="For Embeiu - Yêu Thương & Thấu Hiểu" />
         <meta property="twitter:description" content="Ứng dụng AI thông minh giúp theo dõi chu kỳ, chăm sóc sức khỏe sinh sản và gắn kết tình cảm vợ chồng." />
-        <meta property="twitter:image" content="https://lunacare-rho.vercel.app/icon.png" />
+        <meta property="twitter:image" content="https://embeiu.vercel.app/icon.png" />
 
         <ScrollViewStyleReset />
       </head>
