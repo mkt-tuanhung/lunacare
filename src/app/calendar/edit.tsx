@@ -1,13 +1,12 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { Feather } from '@expo/vector-icons';
 import { useCycleStore } from '../../store/useCycleStore';
 import { useProfileStore } from '../../store/useProfileStore';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width } = Dimensions.get('window');
 const WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 export default function EditCycleScreen() {
@@ -21,7 +20,7 @@ export default function EditCycleScreen() {
     const draft = new Set<string>();
     periodEvents.forEach(ev => {
       let current = new Date(ev.startDate);
-      const end = new Date(ev.endDate);
+      const end = new Date(ev.endDate ?? ev.startDate);
       while (current <= end) {
         draft.add(current.toISOString().split('T')[0]);
         current.setDate(current.getDate() + 1);

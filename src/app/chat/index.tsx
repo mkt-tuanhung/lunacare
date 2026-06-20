@@ -112,7 +112,7 @@ export default function ChatAI() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, height: Platform.OS === 'web' ? '100vh' : '100%', overflow: 'hidden' },
+  container: { flex: 1, backgroundColor: colors.background, height: '100%', overflow: 'hidden' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: colors.card, boxShadow: '0px 4px 10px rgba(0,0,0,0.03)' },
   backButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 6 },

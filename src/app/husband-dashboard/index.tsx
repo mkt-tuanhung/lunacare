@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Feather, FontAwesome5, Ionicons } from '@expo/vector-icons';
-import { useProfileStore } from '../../store/useProfileStore';
+import { Feather, FontAwesome5 } from '@expo/vector-icons';
+import { useCycleStore } from '../../store/useCycleStore';
 
 // Components
 import CareKit from '../../components/husband/CareKit';
@@ -10,25 +9,42 @@ import DoNotSayGuide from '../../components/husband/DoNotSayGuide';
 import HouseworkShield from '../../components/husband/HouseworkShield';
 import LoveScript from '../../components/husband/LoveScript';
 
-const { width } = Dimensions.get('window');
-
 // Tone màu trầm tĩnh, nam tính, tin cậy
 const husbandTheme = {
-  bg: '#F8FAFC', // Slate 50
-  primary: '#3B82F6', // Blue 500
-  dark: '#0F172A', // Slate 900
+  bg: '#F8FAFC',
+  primary: '#3B82F6',
+  dark: '#0F172A',
   card: '#FFFFFF',
-  text: '#334155', // Slate 700
-  muted: '#94A3B8' // Slate 400
+  text: '#334155',
+  muted: '#94A3B8'
 };
 
 export default function HusbandDashboard() {
   const router = useRouter();
-  const profile = useProfileStore(state => state.profile);
+  const prediction = useCycleStore(state => state.prediction);
+  const periodEvents = useCycleStore(state => state.periodEvents);
 
-  // Giả lập trạng thái của vợ dựa trên dữ liệu
-  const isPeriod = true; 
-  const currentTab = 'overview'; // Could use state for tabs, but scrolling is better for now
+  const today = new Date().toISOString().split('T')[0];
+  const isPeriod = periodEvents.some(e => today >= e.startDate && today <= (e.endDate ?? e.startDate))
+    || (prediction?.predictedStartDate != null && prediction?.predictedEndDate != null
+        && today >= prediction.predictedStartDate && today <= prediction.predictedEndDate);
+
+  const periodDayNumber = (() => {
+    const match = periodEvents.find(e => today >= e.startDate && today <= (e.endDate ?? e.startDate));
+    if (!match) return null;
+    const start = new Date(match.startDate).getTime();
+    const now = new Date(today).getTime();
+    return Math.round((now - start) / (1000 * 60 * 60 * 24)) + 1;
+  })();
+
+  const cyclePhase = (() => {
+    if (!prediction) return 'Bình thường';
+    if (isPeriod) return 'Đang có kinh';
+    if (prediction.pmsWindowStart && today >= prediction.pmsWindowStart && prediction.pmsWindowEnd && today <= prediction.pmsWindowEnd) return 'Tiền kinh nguyệt';
+    if (prediction.fertileWindowStart && today >= prediction.fertileWindowStart && prediction.fertileWindowEnd && today <= prediction.fertileWindowEnd) return 'Cửa sổ thụ thai';
+    if (prediction.ovulationDate === today) return 'Ngày rụng trứng';
+    return 'Bình thường';
+  })();
 
   return (
     <View style={styles.container}>
@@ -65,14 +81,14 @@ export default function HusbandDashboard() {
           <View style={styles.metricRow}>
             <View style={styles.metric}>
               <Feather name="droplet" size={24} color={isPeriod ? '#EF4444' : husbandTheme.primary} />
-              <Text style={styles.metricLabel}>Ngày 2</Text>
+              <Text style={styles.metricLabel}>{periodDayNumber ? `Ngày ${periodDayNumber}` : '--'}</Text>
               <Text style={styles.metricSub}>Của chu kỳ</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.metric}>
-              <Feather name="frown" size={24} color="#F59E0B" />
-              <Text style={styles.metricLabel}>Mức Cam</Text>
-              <Text style={styles.metricSub}>Support Level</Text>
+              <Feather name="calendar" size={24} color="#8B5CF6" />
+              <Text style={styles.metricLabel}>{cyclePhase}</Text>
+              <Text style={styles.metricSub}>Giai đoạn</Text>
             </View>
           </View>
           

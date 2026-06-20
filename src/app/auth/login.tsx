@@ -30,13 +30,20 @@ export default function LoginWife() {
       if (isRegistering) {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        
-        setProfile({ 
-          uid: data.user?.id || 'temp_id', 
-          displayName: email.split('@')[0], 
-          onboardingCompleted: false, 
-          healthProfile: null, 
-          role: role 
+
+        // data.user là null khi Supabase yêu cầu xác nhận email
+        if (!data.user) {
+          setErrorMsg('Vui lòng kiểm tra email để xác nhận tài khoản trước khi đăng nhập.');
+          setLoading(false);
+          return;
+        }
+
+        setProfile({
+          uid: data.user.id,
+          displayName: email.split('@')[0],
+          onboardingCompleted: false,
+          healthProfile: null,
+          role: role
         });
 
         if (isHusband) {
@@ -47,8 +54,7 @@ export default function LoginWife() {
       } else {
         const { error, data } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        
-        // Lấy 1 cột duy nhất health_profile
+
         const { data: profileData } = await supabase
           .from('profiles')
           .select('is_onboarded, health_profile, display_name')
@@ -57,15 +63,16 @@ export default function LoginWife() {
 
         const isOnboarded = profileData?.is_onboarded || false;
         const allUserData = profileData?.health_profile || {};
-        
-        setProfile({ 
-          uid: data.user.id, 
-          displayName: profileData?.display_name || email.split('@')[0], 
-          onboardingCompleted: isOnboarded, 
-          healthProfile: allUserData.healthProfile || null, 
+
+        setProfile({
+          uid: data.user.id,
+          displayName: profileData?.display_name || email.split('@')[0],
+          onboardingCompleted: isOnboarded,
+          healthProfile: allUserData.healthProfile || null,
           role: role,
           isAppLockEnabled: allUserData.appSettings?.isAppLockEnabled,
           appLockPin: allUserData.appSettings?.appLockPin,
+          panicPin: allUserData.appSettings?.panicPin,
           hideNotifications: allUserData.appSettings?.hideNotifications,
         });
 

@@ -45,10 +45,10 @@ const WeekCalendar = ({
     return days;
   }, [currentDate]);
 
-  const todayStr = currentDate.toISOString().split('T')[0];
+  const todayStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
 
   const getDayStyle = (date: Date) => {
-    const dStr = date.toISOString().split('T')[0];
+    const dStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     
     let isPeriod = false;
     for (const e of periodEvents) {
@@ -188,13 +188,13 @@ export default function Home() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayTime = today.getTime();
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
   // Logic tính toán trạng thái (Phase)
   let statusTitle = 'Đang tải...';
   let statusSub = '';
   let statusValue = '';
-  let circleColors = ['#F5F7FA', '#E4E7EB']; // Default
+  let circleColors: [string, string] = ['#F5F7FA', '#E4E7EB'];
   
   const pastEvents = periodEvents.filter(e => e.startDate <= todayStr);
   const sortedEvents = [...pastEvents].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
@@ -207,7 +207,7 @@ export default function Home() {
     let isBleeding = false;
     let bleedingDay = 0;
 
-    if (latestEvent && todayStr >= latestEvent.startDate && todayStr <= latestEvent.endDate) {
+    if (latestEvent && todayStr >= latestEvent.startDate && todayStr <= (latestEvent.endDate ?? latestEvent.startDate)) {
       isBleeding = true;
       bleedingDay = Math.round((todayTime - new Date(latestEvent.startDate).getTime()) / (1000*60*60*24)) + 1;
     }
@@ -216,41 +216,38 @@ export default function Home() {
       statusTitle = 'Kỳ kinh nguyệt';
       statusSub = 'Ngày';
       statusValue = bleedingDay.toString();
-      circleColors = ['#FF758F', '#FF4B72']; // Pink-Red
-    } else if (todayStr <= prediction.ovulationDate) {
-      // Giai đoạn nang noãn (Trước rụng trứng)
-      const isFertile = prediction.fertileWindowStart && todayStr >= prediction.fertileWindowStart && todayStr <= prediction.fertileWindowEnd;
+      circleColors = ['#FF758F', '#FF4B72'];
+    } else if (prediction.ovulationDate && todayStr <= prediction.ovulationDate) {
+      const isFertile = prediction.fertileWindowStart && prediction.fertileWindowEnd
+        && todayStr >= prediction.fertileWindowStart && todayStr <= prediction.fertileWindowEnd;
 
       if (todayStr === prediction.ovulationDate) {
         statusTitle = 'Ngày rụng trứng';
         statusSub = 'Cơ hội thụ thai Cao';
         statusValue = 'Cao';
-        circleColors = ['#00E5FF', '#00B8D4']; // Teal
+        circleColors = ['#00E5FF', '#00B8D4'];
       } else {
         const ovulDate = new Date(prediction.ovulationDate);
         const diffToOvul = Math.round((ovulDate.getTime() - todayTime) / (1000*60*60*24));
         statusTitle = 'Rụng trứng sau';
         statusValue = `${diffToOvul} ngày`;
         statusSub = isFertile ? 'Cơ hội thụ thai: Cao' : 'Cơ hội thụ thai: Thấp (i)';
-        circleColors = isFertile ? ['#4DD0E1', '#00BCD4'] : ['#FFCDD2', '#F48FB1']; // Teal cho Dễ thụ thai, Hồng nhạt cho Thấp
+        circleColors = isFertile ? ['#4DD0E1', '#00BCD4'] : ['#FFCDD2', '#F48FB1'];
       }
     } else {
-      // Giai đoạn hoàng thể (Sau rụng trứng)
-      const nextStart = new Date(prediction.predictedStartDate).getTime();
+      const nextStart = prediction.predictedStartDate ? new Date(prediction.predictedStartDate).getTime() : Infinity;
       if (todayTime > nextStart) {
-        // Trễ kinh
         const delayDays = Math.round((todayTime - nextStart) / (1000*60*60*24));
         statusTitle = 'Trễ kinh';
         statusSub = 'ngày';
         statusValue = delayDays.toString();
-        circleColors = ['#FFB74D', '#F57C00']; // Orange
+        circleColors = ['#FFB74D', '#F57C00'];
       } else {
-        // Bình thường - Sắp tới kỳ
         const daysToNext = Math.round((nextStart - todayTime) / (1000*60*60*24));
         statusTitle = 'Kỳ kinh dự kiến sau';
         statusSub = 'ngày';
         statusValue = daysToNext.toString();
-        circleColors = ['#E1BEE7', '#CE93D8']; // Purple nhạt
+        circleColors = ['#E1BEE7', '#CE93D8'];
       }
     }
   }
@@ -328,7 +325,7 @@ export default function Home() {
 
           <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
             <LinearGradient
-              colors={circleColors}
+              colors={circleColors as [string, string]}
               style={styles.heroCircle}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}

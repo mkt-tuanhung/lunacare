@@ -68,13 +68,13 @@ export const useCycleStore = create<CycleState>()(
   togglePeriodDay: (dateStr) => {
     set((state) => {
       const { periodEvents } = state;
-      const matchingEvent = periodEvents.find(e => dateStr >= e.startDate && dateStr <= e.endDate);
+      const matchingEvent = periodEvents.find(e => dateStr >= e.startDate && dateStr <= (e.endDate ?? e.startDate));
 
       const d = new Date(dateStr);
-      const prevDate = new Date(d); prevDate.setDate(d.getDate() - 1);
-      const nextDate = new Date(d); nextDate.setDate(d.getDate() + 1);
-      const prevStr = prevDate.toISOString().split('T')[0];
-      const nextStr = nextDate.toISOString().split('T')[0];
+      const prevDate = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
+      const nextDate = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+      const prevStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}-${String(prevDate.getDate()).padStart(2, '0')}`;
+      const nextStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
 
       if (matchingEvent) {
         // Remove this day
@@ -124,10 +124,7 @@ export const useCycleStore = create<CycleState>()(
 
   calculatePrediction: async () => {
     set({ isPredicting: true });
-    
-    // Add artificial delay for UX (like Flo app animation)
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+
     try {
       const { periodEvents, isAiModeEnabled } = get();
       const cycles = periodEvents.map(e => ({
@@ -143,39 +140,31 @@ export const useCycleStore = create<CycleState>()(
         if (data) recentLogs = data;
       }
 
+      const healthProfile = profileStore.profile?.healthProfile ?? null;
+
       let finalPrediction: CyclePrediction | null = null;
 
       if (isAiModeEnabled) {
-        finalPrediction = await predictCycleWithAI(cycles);
+        finalPrediction = await predictCycleWithAI(cycles, healthProfile);
       }
-      
+
       if (!finalPrediction) {
-        // Chạy thuật toán nội bộ
-        finalPrediction = predictCycle(cycles, recentLogs);
+        finalPrediction = predictCycle(cycles, recentLogs, healthProfile);
       }
       
       set({ prediction: finalPrediction, isPredicting: false });
       
       // Sync prediction to Supabase for husband
       profileStore.updateHealthProfile({ prediction: finalPrediction });
-      profileStore.saveProfileToSupabase();
+      profileStore.saveProfileToSupabase(get().periodEvents);
       
     } catch (error: any) {
       console.error(error);
       const { periodEvents } = get();
       const cycles = periodEvents.map(e => ({ startDate: e.startDate, endDate: e.endDate }));
-      
-      let recentLogs: any[] = [];
-      const profileStore = useProfileStore.getState();
-      if (profileStore.profile?.uid) {
-        const { data } = await supabase.from('daily_logs').select('*').eq('user_id', profileStore.profile.uid).order('log_date', { ascending: false }).limit(1);
-        if (data) recentLogs = data;
-      }
-      
-      const fallbackPrediction = predictCycle(cycles, recentLogs);
-      // Báo cho người dùng biết AI đang bị lỗi gì
+      const fallbackHealthProfile = useProfileStore.getState().profile?.healthProfile ?? null;
+      const fallbackPrediction = predictCycle(cycles, [], fallbackHealthProfile);
       fallbackPrediction.notes = [`[Hệ thống AI tạm ngắt]: ${error.message || 'Lỗi kết nối'}.`, ...fallbackPrediction.notes];
-      
       set({ prediction: fallbackPrediction, isPredicting: false });
     }
   },
@@ -194,9 +183,9 @@ export const useCycleStore = create<CycleState>()(
   syncEventsToSupabase: async () => {
     const profileStore = useProfileStore.getState();
     if (!profileStore.profile?.uid) return;
-    
+
     try {
-      await profileStore.saveProfileToSupabase();
+      await profileStore.saveProfileToSupabase(get().periodEvents);
     } catch (e) {
       console.error("Lỗi khi lưu Chu kỳ lên Supabase:", e);
     }

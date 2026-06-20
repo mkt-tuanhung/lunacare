@@ -113,7 +113,7 @@ export default function Settings() {
         const uri = result.assets[0].uri;
         const uploadedUrl = await uploadAvatarToR2(uri, profileStore.profile?.uid || 'guest');
         if (uploadedUrl) {
-          profileStore.updateAvatar(uploadedUrl);
+          profileStore.updateAvatarUrl(uploadedUrl);
           useToastStore.getState().showToast("Cập nhật ảnh đại diện thành công!", "success");
         } else {
           useToastStore.getState().showToast("Lỗi: Cloudflare R2 chặn tải lên do thiếu CORS hoặc sai API Key.", "error");

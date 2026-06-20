@@ -1,16 +1,17 @@
 import { Cycle, CyclePrediction } from './cycle.types';
-import { useProfileStore } from '../../store/useProfileStore';
+import type { HealthProfile } from '../../store/useProfileStore';
 
-export async function predictCycleWithAI(cycles: Cycle[]): Promise<CyclePrediction | null> {
-  const profileState = useProfileStore.getState();
-  const healthProfile = profileState.profile?.healthProfile;
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
 
-  if (!cycles || cycles.length === 0) {
-    return null;
+export async function predictCycleWithAI(cycles: Cycle[], healthProfile?: HealthProfile | null): Promise<CyclePrediction | null> {
+  if (!cycles || cycles.length === 0) return null;
+
+  if (!API_BASE) {
+    throw new Error('EXPO_PUBLIC_API_BASE_URL chưa được cấu hình. AI Mode chỉ hoạt động khi có backend URL.');
   }
 
   try {
-    const response = await fetch('/api/predict', {
+    const response = await fetch(`${API_BASE}/api/predict`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cycles, healthProfile })

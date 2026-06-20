@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -87,7 +87,7 @@ export default function ReportsScreen() {
             <div class="header-info">
               <div>
                 <div class="info-item"><strong>Họ và tên:</strong> ${profile.displayName || 'Khách'}</div>
-                <div class="info-item"><strong>Tuổi / Chiều cao / Cân nặng:</strong> ${profile.healthProfile?.age || '?'} tuổi / ${profile.healthProfile?.height || '?'} cm / ${profile.healthProfile?.weight || '?'} kg</div>
+                <div class="info-item"><strong>Tuổi / Chiều cao / Cân nặng:</strong> ${profile.healthProfile?.cycleLength || '?'} ngày chu kỳ / Thay đổi cân nặng: ${profile.healthProfile?.weightChange || 'Không rõ'}</div>
               </div>
               <div>
                 <div class="info-item"><strong>Ngày xuất báo cáo:</strong> ${todayDate}</div>
@@ -188,7 +188,7 @@ export default function ReportsScreen() {
                 
                 {hasPcosWarning && (
                   <Text style={[styles.questionText, { color: '#D32F2F', fontWeight: 'bold' }]}>
-                    • Gần đây chu kỳ của tôi rất thưa (>45 ngày). Tôi có cần siêu âm buồng trứng đa nang (PCOS) không?
+                    • Gần đây chu kỳ của tôi rất thưa ({'>'}45 ngày). Tôi có cần siêu âm buồng trứng đa nang (PCOS) không?
                   </Text>
                 )}
                 

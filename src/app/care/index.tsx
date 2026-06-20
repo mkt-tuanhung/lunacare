@@ -64,7 +64,7 @@ export default function CareCenter() {
               <Text style={[styles.sectionTitle, {color: '#2E7D32', marginTop: 0}]}>Smart Grocery</Text>
             </View>
             <Text style={[styles.suggestionText, {marginBottom: 10}]}>Bạn sắp tới kỳ, hệ thống đã chuẩn bị sẵn danh sách đi siêu thị cho bạn (hoặc chồng):</Text>
-            <Text style={{lineHeight: 24, fontSize: 15, color: '#1B5E20'}}>• Băng vệ sinh / Tampon{"\n"}• Trà gừng ấm{"\n"}• Socola đen (>70% cacao){"\n"}• Túi sưởi (nếu đã cũ){"\n"}• Trái cây tươi (Chuối, bơ, cam)</Text>
+            <Text style={{lineHeight: 24, fontSize: 15, color: '#1B5E20'}}>• Băng vệ sinh / Tampon{"\n"}• Trà gừng ấm{"\n"}• Socola đen ({'>'}70% cacao){"\n"}• Túi sưởi (nếu đã cũ){"\n"}• Trái cây tươi (Chuối, bơ, cam)</Text>
           </View>
         )}
 
@@ -256,6 +256,8 @@ const styles = StyleSheet.create({
   
   suggestionCard: { backgroundColor: colors.card, padding: 20, borderRadius: 24, marginBottom: 30, borderWidth: 1, borderColor: colors.primaryLight + '50' },
   suggestionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  section: { padding: 20, borderRadius: 24, marginBottom: 20 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
   suggestionIconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryLight + '30', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   suggestionTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
   suggestionText: { fontSize: 15, color: colors.textMuted, lineHeight: 26 },

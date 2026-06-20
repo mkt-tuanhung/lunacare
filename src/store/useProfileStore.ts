@@ -62,7 +62,7 @@ interface ProfileState {
   setAppLockEnabled: (enabled: boolean, pin?: string) => void;
   setPanicPin: (pin: string) => void;
   setHideNotifications: (hide: boolean) => void;
-  saveProfileToSupabase: () => Promise<void>;
+  saveProfileToSupabase: (periodEvents?: any[]) => Promise<void>;
 }
 
 export const useProfileStore = create<ProfileState>()(
@@ -131,13 +131,10 @@ export const useProfileStore = create<ProfileState>()(
     });
     get().saveProfileToSupabase();
   },
-  saveProfileToSupabase: async () => {
+  saveProfileToSupabase: async (periodEvents?: any[]) => {
     const { profile } = get();
     if (!profile || !profile.uid) return;
-    
-    // Lấy state của cycleStore (Tránh circular dependency)
-    const { useCycleStore } = require('./useCycleStore');
-    
+
     const allUserData = {
       healthProfile: profile.healthProfile,
       appSettings: {
@@ -146,7 +143,7 @@ export const useProfileStore = create<ProfileState>()(
         panicPin: profile.panicPin,
         hideNotifications: profile.hideNotifications
       },
-      periodEvents: useCycleStore.getState().periodEvents
+      periodEvents: periodEvents ?? []
     };
 
     try {

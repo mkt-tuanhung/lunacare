@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, Dimensions, Animated, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, Animated, ActivityIndicator, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState, useRef, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
@@ -9,6 +9,7 @@ import { uploadAvatarToR2 } from '../../lib/r2';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useCycleStore } from '../../store/useCycleStore';
 import { useToastStore } from '../../store/useToastStore';
+import { useAlertStore } from '../../store/useAlertStore';
 
 const moods = [
   { label: 'Vui vẻ', icon: 'smile' },
@@ -60,7 +61,7 @@ export default function LogToday() {
   const [medicationTime, setMedicationTime] = useState('');
   const [notes, setNotes] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
+  const isRecording = false;
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const toggleSymptom = (s: string) => {
@@ -117,7 +118,7 @@ export default function LogToday() {
 
   const handleSave = async () => {
     if (!profile?.uid) {
-      alert('Vui lòng đăng nhập để lưu dữ liệu!');
+      useAlertStore.getState().showAlert('Lỗi', 'Vui lòng đăng nhập để lưu dữ liệu!');
       return;
     }
     
@@ -182,39 +183,8 @@ export default function LogToday() {
         }
       }
 
-      alert('Đã lưu Ghi nhận thành công!');
-      
-      const cycleStore = useCycleStore.getState();
-      const todayStr = payload.log_date;
-      if (payload.is_period_day) {
-        const existingEvent = cycleStore.periodEvents.find(e => {
-            const diff = Math.abs(new Date(e.startDate).getTime() - new Date(todayStr).getTime()) / (1000 * 60 * 60 * 24);
-            return diff <= 10;
-        });
-        
-        if (existingEvent) {
-            if (new Date(todayStr) > new Date(existingEvent.endDate || existingEvent.startDate)) {
-                cycleStore.updatePeriodEvent(existingEvent.id, { endDate: todayStr });
-            }
-        } else {
-            cycleStore.addPeriodEvent({ startDate: todayStr, endDate: todayStr, userId: payload.user_id });
-        }
-      } else {
-        const exactMatch = cycleStore.periodEvents.find(e => e.startDate === todayStr && e.endDate === todayStr);
-        if (exactMatch) {
-            cycleStore.deletePeriodEvent(exactMatch.id);
-        } else {
-            const endMatch = cycleStore.periodEvents.find(e => e.endDate === todayStr);
-            if (endMatch) {
-                const prevDay = new Date(todayStr);
-                prevDay.setDate(prevDay.getDate() - 1);
-                cycleStore.updatePeriodEvent(endMatch.id, { endDate: prevDay.toISOString().split('T')[0] });
-            }
-        }
-      }
+      await useCycleStore.getState().calculatePrediction();
 
-      await cycleStore.calculatePrediction();
-      
       useToastStore.getState().showToast("Đã lưu nhật ký thành công!", "success");
 
       if (router.canGoBack()) {
@@ -257,16 +227,7 @@ export default function LogToday() {
   }, [isRecording]);
 
   const handleVoiceLog = () => {
-    if (isRecording) return;
-    setIsRecording(true);
-    setTimeout(() => {
-      setIsRecording(false);
-      setPainScore(7);
-      setEnergyScore(1);
-      setSelectedSymptoms(prev => [...new Set([...prev, 'Đau bụng', 'Mệt mỏi'])]);
-      setNotes(prev => prev + (prev ? '\n' : '') + 'Cảm thấy rất đau bụng và thèm đồ ngọt (Tạo tự động từ Voice Log)');
-      useToastStore.getState().showToast('Đã ghi nhận: "Hôm nay đau bụng 7 điểm, mệt mỏi, thèm ngọt"', "success");
-    }, 3000);
+    useToastStore.getState().showToast('Tính năng Voice Log đang được phát triển, sắp ra mắt!', 'info');
   };
 
   const handlePickPhoto = async () => {
@@ -300,14 +261,14 @@ export default function LogToday() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={{ padding: 8 }}>
           <Feather name="x" size={28} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>
           {logDate === new Date().toISOString().split('T')[0] ? 'Hôm nay thế nào?' : `Ghi chú ngày ${new Date(logDate).toLocaleDateString('vi-VN')}`}
         </Text>
-        <Pressable onPress={handleSave} style={styles.saveBtn}>
-          <Text style={styles.saveBtnText}>Lưu</Text>
+        <Pressable onPress={handleSave} style={{ padding: 8 }}>
+          <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '700' }}>Lưu</Text>
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>

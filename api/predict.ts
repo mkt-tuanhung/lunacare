@@ -67,12 +67,15 @@ Xin hãy xuất JSON Dự đoán chu kỳ cho vòng lặp kế tiếp dựa trê
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(`OpenAI API error: ${data?.error?.message || response.statusText}`);
     }
 
-    let textResult = data.choices[0].message.content;
+    const textResult = data.choices?.[0]?.message?.content;
+    if (!textResult) {
+      throw new Error('OpenAI returned empty response');
+    }
     const prediction = JSON.parse(textResult);
 
     return res.status(200).json(prediction);

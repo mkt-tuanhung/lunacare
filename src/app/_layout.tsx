@@ -1,15 +1,15 @@
 import { Stack, Redirect, useSegments } from 'expo-router';
-import { useEffect, useState, useRef } from 'react';
-import { loadSeedData } from '../data/seedData';
+import { useEffect, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
-import { View, Text, AppState, StyleSheet, Pressable, Modal } from 'react-native';
+import { View, AppState } from 'react-native';
 import CustomSplash from '../components/CustomSplash';
 import PinPad from '../components/PinPad';
 import FakeNotesApp from '../components/FakeNotesApp';
 import ToastNotification from '../components/ToastNotification';
 import CustomAlertProvider from '../components/CustomAlertProvider';
-import { Feather } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { useState } from 'react';
+import { Modal } from 'react-native';
 
 export default function RootLayout() {
   const segments = useSegments();
@@ -37,11 +37,7 @@ export default function RootLayout() {
   };
 
   useEffect(() => {
-    if (profile?.isAppLockEnabled) {
-      setIsLocked(true);
-      setPinError('');
-    }
-
+    // Chỉ khoá khi app từ background trở về foreground, không khoá khi profile thay đổi giữa session
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         const currentProfile = useProfileStore.getState().profile;
@@ -56,7 +52,7 @@ export default function RootLayout() {
     return () => {
       subscription.remove();
     };
-  }, [profile?.isAppLockEnabled]);
+  }, []);
 
   useEffect(() => {
     setIsReady(true);
@@ -95,7 +91,7 @@ export default function RootLayout() {
   // thì sẽ bị tự động đá về màn hình Chọn Vai trò.
   // Các màn hình Auth (role, login, scan-qr) được phép truy cập tự do.
   const isAuthRoute = segments[0] === 'auth';
-  const isRoot = segments.length === 0;
+  const isRoot = segments[0] === undefined;
   
   if (!profile && !isAuthRoute && !isRoot) {
     return <Redirect href="/auth/role" />;
@@ -133,36 +129,3 @@ export default function RootLayout() {
     </CustomAlertProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  lockContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 30,
-  },
-  lockTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 10,
-  },
-  lockDesc: {
-    fontSize: 15,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  unlockBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: 16,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-  },
-  unlockBtnText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  }
-});

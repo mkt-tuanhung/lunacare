@@ -57,44 +57,48 @@ export default function Calendar() {
   // Tính toán mảng ngày cho tháng hiện tại
   let PERIOD_DAYS: number[] = [];
   let FERTILE_DAYS: number[] = [];
+  let PMS_DAYS: number[] = [];
   let OVULATION_DAY: number = -1;
 
-  // Render các ngày kinh nguyệt thực tế
-  periodEvents.forEach(ev => {
-    const start = new Date(ev.startDate);
-    const end = new Date(ev.endDate || ev.startDate);
-    if (start.getFullYear() === year && start.getMonth() === month) {
-      for (let d = start.getDate(); d <= Math.min(end.getDate(), daysInMonth); d++) {
-        PERIOD_DAYS.push(d);
+  // Helper: thu thập tất cả ngày trong khoảng [startStr, endStr] thuộc tháng đang xem
+  const collectDaysInMonth = (startStr: string, endStr: string): number[] => {
+    const result: number[] = [];
+    const [sy, sm, sd] = startStr.split('-').map(Number);
+    const [ey, em, ed] = endStr.split('-').map(Number);
+    const rangeStart = new Date(sy, sm - 1, sd);
+    const rangeEnd = new Date(ey, em - 1, ed);
+    // duyệt từng ngày trong range, chỉ lấy ngày thuộc tháng/năm đang xem
+    for (let cur = new Date(rangeStart); cur <= rangeEnd; cur.setDate(cur.getDate() + 1)) {
+      if (cur.getFullYear() === year && cur.getMonth() === month) {
+        result.push(cur.getDate());
       }
     }
+    return result;
+  };
+
+  // Render các ngày kinh nguyệt thực tế (hỗ trợ cross-month)
+  periodEvents.forEach(ev => {
+    const endStr = ev.endDate || ev.startDate;
+    PERIOD_DAYS.push(...collectDaysInMonth(ev.startDate, endStr));
   });
 
   // Render dự đoán (Tương lai)
   if (prediction && prediction.predictedStartDate && prediction.predictedEndDate) {
-    const pStart = new Date(prediction.predictedStartDate);
-    const pEnd = new Date(prediction.predictedEndDate);
-    if (pStart.getFullYear() === year && pStart.getMonth() === month) {
-      for (let d = pStart.getDate(); d <= Math.min(pEnd.getDate(), daysInMonth); d++) {
-        PERIOD_DAYS.push(d);
-      }
-    }
+    PERIOD_DAYS.push(...collectDaysInMonth(prediction.predictedStartDate, prediction.predictedEndDate));
 
     if (prediction.fertileWindowStart && prediction.fertileWindowEnd) {
-      const fStart = new Date(prediction.fertileWindowStart);
-      const fEnd = new Date(prediction.fertileWindowEnd);
-      if (fStart.getFullYear() === year && fStart.getMonth() === month) {
-        for (let d = fStart.getDate(); d <= Math.min(fEnd.getDate(), daysInMonth); d++) {
-          FERTILE_DAYS.push(d);
-        }
-      }
+      FERTILE_DAYS.push(...collectDaysInMonth(prediction.fertileWindowStart, prediction.fertileWindowEnd));
     }
 
     if (prediction.ovulationDate) {
-      const oDay = new Date(prediction.ovulationDate);
-      if (oDay.getFullYear() === year && oDay.getMonth() === month) {
-        OVULATION_DAY = oDay.getDate();
+      const [oy, om, od] = prediction.ovulationDate.split('-').map(Number);
+      if (oy === year && om - 1 === month) {
+        OVULATION_DAY = od;
       }
+    }
+
+    if (prediction.pmsWindowStart && prediction.pmsWindowEnd) {
+      PMS_DAYS.push(...collectDaysInMonth(prediction.pmsWindowStart, prediction.pmsWindowEnd));
     }
   }
 
@@ -103,6 +107,7 @@ export default function Calendar() {
     if (PERIOD_DAYS.includes(day)) return styles.periodDay;
     if (day === OVULATION_DAY) return styles.ovulationDay;
     if (FERTILE_DAYS.includes(day)) return styles.fertileDay;
+    if (PMS_DAYS.includes(day)) return styles.pmsDay;
     return styles.normalDay;
   };
 
@@ -111,6 +116,7 @@ export default function Calendar() {
     if (PERIOD_DAYS.includes(day)) return styles.periodDayText;
     if (day === OVULATION_DAY) return styles.ovulationDayText;
     if (FERTILE_DAYS.includes(day)) return styles.fertileDayText;
+    if (PMS_DAYS.includes(day)) return styles.pmsDayText;
     return styles.normalDayText;
   };
 
@@ -120,13 +126,14 @@ export default function Calendar() {
   const handleNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
   const handleDayPress = (day: number) => {
-    // Chuyển sang định dạng YYYY-MM-DD
-    const dateStr = new Date(Date.UTC(year, month, day)).toISOString().split('T')[0];
+    const d = new Date(year, month, day);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     togglePeriodDay(dateStr);
   };
 
   const handleDayLongPress = (day: number) => {
-    const dateStr = new Date(Date.UTC(year, month, day)).toISOString().split('T')[0];
+    const d = new Date(year, month, day);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     setSelectedDateStr(dateStr);
     
     const log = monthLogs.find(l => l.log_date === dateStr);
@@ -172,7 +179,11 @@ export default function Calendar() {
             ))}
             
             {days.map(day => {
-              const hasLog = monthLogs.some(l => l.log_date === new Date(Date.UTC(year, month, day)).toISOString().split('T')[0]);
+              const hasLog = monthLogs.some(l => {
+                const d2 = new Date(year, month, day);
+                const ds = `${d2.getFullYear()}-${String(d2.getMonth() + 1).padStart(2, '0')}-${String(d2.getDate()).padStart(2, '0')}`;
+                return l.log_date === ds;
+              });
               return (
                 <Pressable 
                   key={day} 
@@ -345,6 +356,12 @@ const styles = StyleSheet.create({
   
   ovulationDay: { backgroundColor: '#00BCD4' },
   ovulationDayText: { color: 'white', fontWeight: '800' },
+
+  pmsDay: { backgroundColor: '#EDE7F6' },
+  pmsDayText: { color: '#6A1B9A', fontWeight: '700' },
+
+  emptyLogBox: { padding: 16, alignItems: 'center', justifyContent: 'center' },
+  emptyLogText: { fontSize: 14, color: colors.textMuted, textAlign: 'center' },
 
   legendTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 15, marginLeft: 5 },
   legendCard: { backgroundColor: colors.card, borderRadius: 24, padding: 20, marginBottom: 30, boxShadow: '0px 4px 12px rgba(0,0,0,0.03)' },
