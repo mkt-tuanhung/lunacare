@@ -1,146 +1,131 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../../theme/colors';
 import { Feather, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/useProfileStore';
 
+// Components
+import CareKit from '../../components/husband/CareKit';
+import DoNotSayGuide from '../../components/husband/DoNotSayGuide';
+import HouseworkShield from '../../components/husband/HouseworkShield';
+import LoveScript from '../../components/husband/LoveScript';
+
 const { width } = Dimensions.get('window');
 
-// Đổi theme sang tone Xanh Nam Tính
+// Tone màu trầm tĩnh, nam tính, tin cậy
 const husbandTheme = {
-  bg: '#F5F9FF',
-  primary: '#2196F3',
-  dark: '#0D47A1',
+  bg: '#F8FAFC', // Slate 50
+  primary: '#3B82F6', // Blue 500
+  dark: '#0F172A', // Slate 900
   card: '#FFFFFF',
-  text: '#1E293B',
-  muted: '#64748B'
+  text: '#334155', // Slate 700
+  muted: '#94A3B8' // Slate 400
 };
 
 export default function HusbandDashboard() {
   const router = useRouter();
   const profile = useProfileStore(state => state.profile);
 
-  // Giả lập trạng thái của vợ dựa trên dữ liệu (Thực tế sẽ tính bằng thuật toán)
+  // Giả lập trạng thái của vợ dựa trên dữ liệu
   const isPeriod = true; 
-
-  const handleRemind = (action: string) => {
-    alert(`Đã gửi thông báo nhắc Vợ: "${action}" thành công! (Pinh pinh)`);
-  };
+  const currentTab = 'overview'; // Could use state for tabs, but scrolling is better for now
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: husbandTheme.bg }]}>
+    <View style={styles.container}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Chào Chồng Yêu,</Text>
-          <Text style={styles.subGreeting}>Hôm nay vợ bạn cảm thấy thế nào?</Text>
-        </View>
-        <View style={styles.avatar}>
-          <FontAwesome5 name="user-tie" size={24} color={husbandTheme.primary} />
-        </View>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Feather name="arrow-left" size={24} color={husbandTheme.dark} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Partner Mode</Text>
+        <View style={styles.backBtn} />
       </View>
 
-      <View style={styles.statusCard}>
-        <View style={styles.statusHeader}>
-          <Text style={styles.statusTitle}>Tình trạng của Vợ</Text>
-          <View style={[styles.badge, isPeriod ? styles.badgeDanger : styles.badgeSafe]}>
-            <Text style={styles.badgeText}>{isPeriod ? 'Đang Tới Tháng' : 'Bình thường'}</Text>
-          </View>
-        </View>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: 100}}>
         
-        <View style={styles.metricRow}>
-          <View style={styles.metric}>
-            <Feather name="droplet" size={24} color={isPeriod ? '#F44336' : husbandTheme.primary} />
-            <Text style={styles.metricLabel}>Ngày 2</Text>
-            <Text style={styles.metricSub}>Của chu kỳ</Text>
+        {/* Lời chào & Trạng thái nhanh */}
+        <View style={styles.greetingSection}>
+          <View>
+            <Text style={styles.greeting}>Chào Chồng Yêu 👋</Text>
+            <Text style={styles.subGreeting}>Hôm nay vợ cần sự tinh tế của bạn.</Text>
           </View>
-          <View style={styles.divider} />
-          <View style={styles.metric}>
-            <Feather name="frown" size={24} color="#FF9800" />
-            <Text style={styles.metricLabel}>Mệt mỏi</Text>
-            <Text style={styles.metricSub}>Cảm xúc hiện tại</Text>
+          <View style={styles.avatar}>
+            <FontAwesome5 name="user-tie" size={24} color={husbandTheme.primary} />
           </View>
         </View>
-      </View>
 
-      <Text style={styles.sectionTitle}>Tương tác Nhanh</Text>
-      <View style={styles.actionGrid}>
-        <Pressable style={styles.actionBtn} onPress={() => handleRemind('Uống nhiều nước ấm nhé!')}>
-          <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-            <Ionicons name="water" size={28} color={husbandTheme.primary} />
+        {/* Cảnh báo trạng thái */}
+        <View style={styles.statusCard}>
+          <View style={styles.statusHeader}>
+            <Text style={styles.statusTitle}>Tình trạng hiện tại</Text>
+            <View style={[styles.badge, isPeriod ? styles.badgeDanger : styles.badgeSafe]}>
+              <Text style={styles.badgeText}>{isPeriod ? '🔴 Đang Tới Tháng' : '🟢 Bình thường'}</Text>
+            </View>
           </View>
-          <Text style={styles.actionText}>Nhắc uống nước</Text>
-        </Pressable>
-
-        <Pressable style={styles.actionBtn} onPress={() => handleRemind('Đi ngủ sớm đi vợ ơi!')}>
-          <View style={[styles.actionIcon, { backgroundColor: '#EDE7F6' }]}>
-            <Ionicons name="moon" size={28} color="#673AB7" />
+          
+          <View style={styles.metricRow}>
+            <View style={styles.metric}>
+              <Feather name="droplet" size={24} color={isPeriod ? '#EF4444' : husbandTheme.primary} />
+              <Text style={styles.metricLabel}>Ngày 2</Text>
+              <Text style={styles.metricSub}>Của chu kỳ</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.metric}>
+              <Feather name="frown" size={24} color="#F59E0B" />
+              <Text style={styles.metricLabel}>Mức Cam</Text>
+              <Text style={styles.metricSub}>Support Level</Text>
+            </View>
           </View>
-          <Text style={styles.actionText}>Nhắc đi ngủ</Text>
-        </Pressable>
-
-        <Pressable style={styles.actionBtn} onPress={() => handleRemind('Anh đang về, mua gì không?')}>
-          <View style={[styles.actionIcon, { backgroundColor: '#FBE9E7' }]}>
-            <Ionicons name="fast-food" size={28} color="#FF5722" />
+          
+          <View style={styles.aiTipBox}>
+            <FontAwesome5 name="magic" size={14} color="#8B5CF6" />
+            <Text style={styles.aiTipText}>
+              Phân tích AI: Hôm nay vợ dễ cáu gắt và đau mỏi lưng. Nên chủ động làm việc nhà và tránh tranh cãi.
+            </Text>
           </View>
-          <Text style={styles.actionText}>Hỏi đồ ăn</Text>
-        </Pressable>
-
-        <Pressable style={styles.actionBtn} onPress={() => handleRemind('Anh yêu em ❤️')}>
-          <View style={[styles.actionIcon, { backgroundColor: '#FFEBEE' }]}>
-            <Ionicons name="heart" size={28} color="#F44336" />
-          </View>
-          <Text style={styles.actionText}>Gửi tình yêu</Text>
-        </Pressable>
-      </View>
-
-      <Text style={styles.sectionTitle}>Gợi ý Chăm sóc (AI)</Text>
-      <View style={styles.tipCard}>
-        <View style={styles.tipIcon}>
-          <FontAwesome5 name="lightbulb" size={24} color="#FFC107" />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.tipTitle}>Mẹo cho hôm nay</Text>
-          <Text style={styles.tipDesc}>
-            Vợ bạn đang ở ngày thứ 2 của chu kỳ và dễ bị đau bụng. Hãy chủ động pha một ly trà gừng ấm hoặc chườm túi nóng cho cô ấy nhé! Đừng cãi lý lúc này.
-          </Text>
-        </View>
-      </View>
-      
-      <View style={{ height: 40 }} />
-    </ScrollView>
+
+        {/* Các module Premium của Husband Mode */}
+        
+        <CareKit />
+        
+        <HouseworkShield />
+        
+        <LoveScript />
+        
+        <DoNotSayGuide />
+
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 40, marginBottom: 30 },
+  container: { flex: 1, backgroundColor: husbandTheme.bg },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 60, paddingBottom: 15, paddingHorizontal: 20, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  backBtn: { width: 40, height: 40, justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: husbandTheme.dark },
+  
+  scrollView: { flex: 1, padding: 20 },
+  
+  greetingSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25, marginTop: 10 },
   greeting: { fontSize: 24, fontWeight: '800', color: husbandTheme.dark, marginBottom: 5 },
   subGreeting: { fontSize: 14, color: husbandTheme.muted },
-  avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center', boxShadow: '0px 4px 10px rgba(0,0,0,0.05)' },
+  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center', boxShadow: '0px 4px 10px rgba(0,0,0,0.05)', borderWidth: 1, borderColor: '#E2E8F0' },
   
-  statusCard: { backgroundColor: husbandTheme.card, borderRadius: 24, padding: 24, marginBottom: 30, boxShadow: '0px 8px 20px rgba(33, 150, 243, 0.1)' },
+  statusCard: { backgroundColor: husbandTheme.card, borderRadius: 24, padding: 24, marginBottom: 30, boxShadow: '0px 8px 20px rgba(59, 130, 246, 0.08)' },
   statusHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  statusTitle: { fontSize: 18, fontWeight: '700', color: husbandTheme.text },
+  statusTitle: { fontSize: 18, fontWeight: '700', color: husbandTheme.dark },
   badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  badgeDanger: { backgroundColor: '#FFEBEE' },
-  badgeSafe: { backgroundColor: '#E8F5E9' },
-  badgeText: { fontSize: 12, fontWeight: '700', color: '#F44336' },
+  badgeDanger: { backgroundColor: '#FEE2E2' },
+  badgeSafe: { backgroundColor: '#DCFCE7' },
+  badgeText: { fontSize: 13, fontWeight: '700', color: '#B91C1C' },
   
-  metricRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', backgroundColor: husbandTheme.bg, padding: 15, borderRadius: 16 },
-  metric: { alignItems: 'center' },
+  metricRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 15, borderRadius: 16, marginBottom: 15 },
+  metric: { alignItems: 'center', flex: 1 },
   metricLabel: { fontSize: 18, fontWeight: '800', color: husbandTheme.dark, marginTop: 10, marginBottom: 4 },
   metricSub: { fontSize: 12, color: husbandTheme.muted },
-  divider: { width: 1, height: 40, backgroundColor: '#CBD5E1' },
-
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: husbandTheme.dark, marginBottom: 15, marginLeft: 5 },
+  divider: { width: 1, height: 40, backgroundColor: '#E2E8F0' },
   
-  actionGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 30 },
-  actionBtn: { width: (width - 48 - 15) / 2, backgroundColor: husbandTheme.card, padding: 15, borderRadius: 20, alignItems: 'center', marginBottom: 15, boxShadow: '0px 4px 12px rgba(0,0,0,0.03)' },
-  actionIcon: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  actionText: { fontSize: 14, fontWeight: '700', color: husbandTheme.text },
-
-  tipCard: { flexDirection: 'row', backgroundColor: husbandTheme.card, padding: 20, borderRadius: 20, alignItems: 'flex-start', gap: 15, boxShadow: '0px 4px 12px rgba(0,0,0,0.03)' },
-  tipIcon: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#FFF8E1', justifyContent: 'center', alignItems: 'center' },
-  tipTitle: { fontSize: 16, fontWeight: '800', color: husbandTheme.text, marginBottom: 5 },
-  tipDesc: { fontSize: 14, color: husbandTheme.muted, lineHeight: 22 },
+  aiTipBox: { flexDirection: 'row', backgroundColor: '#F5F3FF', padding: 12, borderRadius: 12, alignItems: 'center' },
+  aiTipText: { flex: 1, marginLeft: 10, fontSize: 13, color: '#6D28D9', lineHeight: 20, fontWeight: '500' }
 });
