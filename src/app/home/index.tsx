@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Switch, Alert } from 'react-native';
 import { useEffect } from 'react';
 import { useCycleStore } from '../../store/useCycleStore';
 import { useProfileStore } from '../../store/useProfileStore';
@@ -9,7 +9,7 @@ import { Feather, Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/v
 const { width } = Dimensions.get('window');
 
 export default function Home() {
-  const { prediction, isPredicting, calculatePrediction } = useCycleStore();
+  const { prediction, isPredicting, calculatePrediction, isAiModeEnabled, toggleAiMode } = useCycleStore();
   const profile = useProfileStore((state) => state.profile);
   const router = useRouter();
 
@@ -130,7 +130,16 @@ export default function Home() {
               <View style={[styles.ovulationCard, { backgroundColor: '#F3E5F5', borderColor: '#E1BEE7', marginTop: 15 }]}>
                 <View style={styles.ovulationHeader}>
                   <MaterialCommunityIcons name="robot-outline" size={20} color="#9C27B0" />
-                  <Text style={[styles.ovulationTitle, { color: '#8E24AA' }]}>AI Chẩn Đoán & Lời Khuyên</Text>
+                  <Text style={[styles.ovulationTitle, { color: '#8E24AA', flex: 1 }]}>Chẩn Đoán & Lời Khuyên</Text>
+                  <Switch
+                    value={isAiModeEnabled}
+                    onValueChange={(val) => {
+                      if (val) Alert.alert("Bật AI Mode", "Đã bật AI mode giúp chẩn đoán và chăm sóc vợ tốt hơn");
+                      toggleAiMode(val);
+                    }}
+                    trackColor={{ false: '#d1d1d1', true: '#E1BEE7' }}
+                    thumbColor={isAiModeEnabled ? '#9C27B0' : '#f4f3f4'}
+                  />
                 </View>
                 <Text style={{ fontSize: 13, color: '#4A148C', lineHeight: 20 }}>
                   {prediction.notes[0]}

@@ -3,17 +3,19 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfileStore } from './useProfileStore';
 import { PeriodEvent, CyclePrediction } from '../features/cycle/cycle.types';
-import { predictCycle, predictCycleWithAI } from '../features/cycle/cycle.engine';
+import { predictCycle } from '../features/cycle/cycle.engine';
 
 interface CycleState {
   periodEvents: PeriodEvent[];
   prediction: CyclePrediction | null;
   isPredicting: boolean;
+  isAiModeEnabled: boolean;
   addPeriodEvent: (event: Omit<PeriodEvent, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updatePeriodEvent: (id: string, updates: Partial<PeriodEvent>) => void;
   deletePeriodEvent: (id: string) => void;
   calculatePrediction: () => Promise<void>;
   setPeriodEvents: (events: PeriodEvent[]) => void;
+  toggleAiMode: (enabled: boolean) => void;
 }
 
 export const useCycleStore = create<CycleState>()(
@@ -22,6 +24,7 @@ export const useCycleStore = create<CycleState>()(
   periodEvents: [],
   prediction: null,
   isPredicting: false,
+  isAiModeEnabled: false,
   
   addPeriodEvent: (eventData) => {
     const newEvent: PeriodEvent = {
@@ -58,33 +61,37 @@ export const useCycleStore = create<CycleState>()(
   calculatePrediction: async () => {
     set({ isPredicting: true });
     try {
-      const { periodEvents } = get();
+      const { periodEvents, isAiModeEnabled } = get();
       const cycles = periodEvents.map(e => ({
         startDate: e.startDate,
         endDate: e.endDate,
       }));
       
-      // Gọi AI suy luận
-      const aiPrediction = await predictCycleWithAI(cycles);
+      // Tải nhật ký gần nhất để cho Thuật toán tham khảo
+      let recentLogs: any[] = [];
+      const { supabase } = require('../lib/supabase');
+      const profileStore = useProfileStore.getState();
+      if (profileStore.profile?.uid) {
+        const { data } = await supabase.from('daily_logs').select('*').eq('user_id', profileStore.profile.uid).order('log_date', { ascending: false }).limit(1);
+        if (data) recentLogs = data;
+      }
+
+      let finalPrediction: CyclePrediction | null = null;
+
+      if (isAiModeEnabled) {
+        // IMPORT ĐỘNG TỪ ai.engine.ts
+        const { predictCycleWithAI } = require('../features/cycle/ai.engine');
+        finalPrediction = await predictCycleWithAI(cycles);
+      }
       
-      let finalPrediction = aiPrediction;
       if (!finalPrediction) {
-        // Tải nhật ký gần nhất để cho Thuật toán Offline tham khảo
-        let recentLogs: any[] = [];
-        const { supabase } = require('../lib/supabase');
-        const profileStore = useProfileStore.getState();
-        if (profileStore.profile?.uid) {
-          const { data } = await supabase.from('daily_logs').select('*').eq('user_id', profileStore.profile.uid).order('log_date', { ascending: false }).limit(1);
-          if (data) recentLogs = data;
-        }
-        // Fallback thuật toán cũ nếu AI lỗi
+        // Chạy thuật toán nội bộ
         finalPrediction = predictCycle(cycles, recentLogs);
       }
       
       set({ prediction: finalPrediction, isPredicting: false });
       
       // Sync prediction to Supabase for husband
-      const profileStore = useProfileStore.getState();
       profileStore.updateHealthProfile({ prediction: finalPrediction });
       profileStore.saveProfileToSupabase();
       
@@ -107,6 +114,11 @@ export const useCycleStore = create<CycleState>()(
       
       set({ prediction: fallbackPrediction, isPredicting: false });
     }
+  },
+
+  toggleAiMode: (enabled: boolean) => {
+    set({ isAiModeEnabled: enabled });
+    get().calculatePrediction();
   },
 
   setPeriodEvents: (events) => {
