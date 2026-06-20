@@ -98,7 +98,7 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
       const today = new Date();
       today.setHours(0,0,0,0);
       let loopCount = 0;
-      while (new Date(pStartDate).getTime() < today.getTime() && loopCount < 100) { 
+      while (new Date(addDays(pStartDate, predictedCycleLength)).getTime() <= today.getTime() && loopCount < 100) { 
           pStartDate = addDays(pStartDate, predictedCycleLength);
           loopCount++;
       }
@@ -165,11 +165,12 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
   // PRD 9.2: Next period start = last period start + predicted cycle length.
   let predictedStartDate = addDays(lastCycle.startDate, predictedCycleLength);
   
-  // Nếu ngày dự đoán nằm trong quá khứ, chạy loop để lấy chu kỳ tiếp theo trong tương lai
+  // Nếu ngày dự đoán nằm trong quá khứ, chỉ tua nếu nó đã trễ QUÁ 1 chu kỳ (tức là đã sang chu kỳ tiếp theo)
   const today = new Date();
   today.setHours(0,0,0,0);
   let loopCount = 0;
-  while (new Date(predictedStartDate).getTime() < today.getTime() && loopCount < 100) { 
+  // Điều kiện: Ngày dự kiến của kỳ TIẾP THEO NỮA cũng đã ở trong quá khứ thì mới tua
+  while (new Date(addDays(predictedStartDate, predictedCycleLength)).getTime() <= today.getTime() && loopCount < 100) { 
       predictedStartDate = addDays(predictedStartDate, predictedCycleLength);
       loopCount++;
   }
