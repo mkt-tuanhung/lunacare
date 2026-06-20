@@ -112,7 +112,7 @@ export default function ChatAI() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.background, height: Platform.OS === 'web' ? '100vh' : '100%', overflow: 'hidden' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: colors.card, boxShadow: '0px 4px 10px rgba(0,0,0,0.03)' },
   backButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -126,13 +126,13 @@ const styles = StyleSheet.create({
   botBubble: { alignSelf: 'flex-start' },
   userBubble: { alignSelf: 'flex-end', justifyContent: 'flex-end' },
   
-  botAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primaryLight + '40', justifyContent: 'center', alignItems: 'center', marginRight: 10, marginTop: 'auto' },
+  botAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primaryLight + '40', justifyContent: 'center', alignItems: 'center', marginRight: 10, marginTop: 'auto', flexShrink: 0 },
   
-  messageContent: { padding: 16, borderRadius: 24 },
+  messageContent: { padding: 16, borderRadius: 24, flexShrink: 1 },
   botContent: { backgroundColor: colors.card, borderBottomLeftRadius: 4, boxShadow: '0px 2px 8px rgba(0,0,0,0.04)' },
   userContent: { backgroundColor: colors.primary, borderBottomRightRadius: 4, boxShadow: '0px 4px 12px rgba(255, 141, 161, 0.3)' },
   
-  messageText: { fontSize: 15, lineHeight: 22 },
+  messageText: { fontSize: 15, lineHeight: 22, flexWrap: 'wrap' },
   botText: { color: colors.text },
   userText: { color: 'white', fontWeight: '500' },
 
