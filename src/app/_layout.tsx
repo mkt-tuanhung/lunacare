@@ -1,4 +1,4 @@
-import { Stack, Redirect } from 'expo-router';
+import { Stack, Redirect, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { loadSeedData } from '../data/seedData';
 import { useProfileStore } from '../store/useProfileStore';
@@ -29,15 +29,16 @@ export default function RootLayout() {
   // Nếu chưa có profile mà cố tình truy cập các trang nội bộ (onboarding, home, partner...)
   // thì sẽ bị tự động đá về màn hình Chọn Vai trò.
   // Các màn hình Auth (role, login, scan-qr) được phép truy cập tự do.
-  const isAuthRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/auth');
-  const isRoot = typeof window !== 'undefined' && window.location.pathname === '/';
+  const segments = useSegments();
+  const isAuthRoute = segments[0] === 'auth';
+  const isRoot = segments.length === 0;
   
   if (!profile && !isAuthRoute && !isRoot) {
     return <Redirect href="/auth/role" />;
   }
 
   // Nếu ĐÃ ĐĂNG NHẬP mà lại vô tình mở lại trang auth (VD: share link /auth/role) -> Đá thẳng vào Dashboard
-  if (profile && isAuthRoute && typeof window !== 'undefined') {
+  if (profile && isAuthRoute) {
     if (!profile.onboardingCompleted) {
       return <Redirect href="/onboarding" />;
     } else {

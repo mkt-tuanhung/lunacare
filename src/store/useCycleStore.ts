@@ -31,7 +31,7 @@ export const useCycleStore = create<CycleState>()(
   addPeriodEvent: (eventData) => {
     const newEvent: PeriodEvent = {
       ...eventData,
-      id: Math.random().toString(36).substring(7),
+      id: Date.now().toString(36) + Math.random().toString(36).substring(2),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
