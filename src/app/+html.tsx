@@ -15,9 +15,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
         {/* Load Barlow font from Google Fonts */}
         <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@1,200;1,300;1,400&display=swap" rel="stylesheet" />
 
-        {/* Cấu hình SEO và Social Preview (Open Graph) */}
-        <title>For Embeiu - Yêu Thương & Thấu Hiểu</title>
-        <meta name="description" content="For Embeiu là ứng dụng AI thông minh giúp theo dõi chu kỳ, chăm sóc sức khỏe sinh sản và gắn kết tình cảm vợ chồng." />
+        {/* Thêm Tiêu đề và Meta description cho chuẩn SEO */}
+        <title>Iu MP - Thấu Hiểu Em</title>
+        <meta name="description" content="Ứng dụng theo dõi sức khỏe, tâm lý và chu kỳ kinh nguyệt dành riêng cho cặp đôi. Dữ liệu bảo mật tuyệt đối, đồng bộ theo thời gian thực." />
         
         {/* PWA & iOS Safari Add to Home Screen */}
         <link rel="icon" type="image/png" href="/icon.png?v=2" />
@@ -29,18 +29,18 @@ export default function Root({ children }: { children: React.ReactNode }) {
         
         {/* Open Graph / Facebook / Zalo */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://embeiu.vercel.app/" />
-        <meta property="og:title" content="For Embeiu - Yêu Thương & Thấu Hiểu" />
-        <meta property="og:description" content="Ứng dụng AI thông minh giúp theo dõi chu kỳ, chăm sóc sức khỏe sinh sản và gắn kết tình cảm vợ chồng." />
+        <meta property="og:url" content="https://app.lunacare.com/" />
+        <meta property="og:title" content="Iu MP - Thấu Hiểu Em" />
+        <meta property="og:description" content="Ứng dụng chăm sóc sức khỏe sinh sản, theo dõi kinh nguyệt, thai kỳ và kết nối tình cảm gia đình." />
         <meta property="og:image" content="https://embeiu.vercel.app/icon.png" />
         <meta property="og:image:width" content="1024" />
         <meta property="og:image:height" content="1024" />
 
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://embeiu.vercel.app/" />
-        <meta property="twitter:title" content="For Embeiu - Yêu Thương & Thấu Hiểu" />
-        <meta property="twitter:description" content="Ứng dụng AI thông minh giúp theo dõi chu kỳ, chăm sóc sức khỏe sinh sản và gắn kết tình cảm vợ chồng." />
+        <meta property="twitter:url" content="https://app.lunacare.com/" />
+        <meta property="twitter:title" content="Iu MP - Thấu Hiểu Em" />
+        <meta property="twitter:description" content="Ứng dụng chăm sóc sức khỏe và kết nối tình cảm dành cho bạn và người thương." />
         <meta property="twitter:image" content="https://embeiu.vercel.app/icon.png" />
 
         <ScrollViewStyleReset />
