@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { chatWithAI } from '../../lib/ai';
+import { useProfileStore } from '../../store/useProfileStore';
 
 export default function ChatAI() {
   const router = useRouter();
@@ -11,23 +13,37 @@ export default function ChatAI() {
     { id: 1, text: 'Chào bạn! Mình là Luna AI 🌙\nMình có thể giúp gì cho sức khỏe của bạn hôm nay?', isBot: true },
   ]);
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
+  const [isTyping, setIsTyping] = useState(false);
+  const profileStore = useProfileStore();
+
+  const handleSend = async () => {
+    if (!inputText.trim() || isTyping) return;
     
-    // Thêm tin nhắn của User
-    const newUserMsg = { id: Date.now(), text: inputText, isBot: false };
+    const textToSent = inputText.trim();
+    const newUserMsg = { id: Date.now(), text: textToSent, isBot: false };
     setMessages(prev => [...prev, newUserMsg]);
     setInputText('');
+    setIsTyping(true);
 
-    // Giả lập AI đang gõ và trả lời sau 1 giây
-    setTimeout(() => {
+    try {
+      // Gọi Vercel Backend ChatGPT
+      const response = await chatWithAI(textToSent, profileStore.profile?.healthProfile);
+      
       const botResponse = { 
         id: Date.now() + 1, 
-        text: 'Chức năng AI trí tuệ nhân tạo hiện đang trong giai đoạn phát triển (Mockup). Sắp tới mình sẽ được kết nối với ChatGPT để tâm sự cùng bạn nha! 💖', 
+        text: response.text, 
         isBot: true 
       };
       setMessages(prev => [...prev, botResponse]);
-    }, 1000);
+    } catch (error) {
+      setMessages(prev => [...prev, { 
+        id: Date.now() + 1, 
+        text: 'Xin lỗi, Luna đang gặp chút sự cố đường truyền. Bạn thử lại nha! 🥺', 
+        isBot: true 
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
@@ -64,6 +80,16 @@ export default function ChatAI() {
             </View>
           </View>
         ))}
+        {isTyping && (
+          <View style={[styles.messageBubble, styles.botBubble]}>
+            <View style={styles.botAvatar}><Text style={{fontSize: 16}}>🌙</Text></View>
+            <View style={[styles.messageContent, styles.botContent, { paddingVertical: 10, paddingHorizontal: 16 }]}>
+              <Text style={[styles.messageText, styles.botText, { fontStyle: 'italic', color: colors.textMuted }]}>
+                Luna đang suy nghĩ...
+              </Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.inputContainer}>
