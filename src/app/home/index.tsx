@@ -136,19 +136,27 @@ export default function Home() {
   const [isUploading, setIsUploading] = useState(false);
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const rippleAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (isPredicting) {
       Animated.loop(
-        Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 1.05,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(scaleAnim, {
+              toValue: 1.05,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+            Animated.timing(scaleAnim, {
+              toValue: 1,
+              duration: 800,
+              useNativeDriver: true,
+            })
+          ]),
+          Animated.timing(rippleAnim, {
             toValue: 1,
-            duration: 800,
+            duration: 1600,
             useNativeDriver: true,
           })
         ])
@@ -156,8 +164,10 @@ export default function Home() {
     } else {
       scaleAnim.stopAnimation();
       scaleAnim.setValue(1);
+      rippleAnim.stopAnimation();
+      rippleAnim.setValue(0);
     }
-  }, [isPredicting, scaleAnim]);
+  }, [isPredicting, scaleAnim, rippleAnim]);
 
   useEffect(() => {
     if (prediction?.predictedStartDate) {
@@ -178,7 +188,8 @@ export default function Home() {
   let statusValue = '';
   let circleColors = ['#F5F7FA', '#E4E7EB']; // Default
   
-  const sortedEvents = [...periodEvents].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+  const pastEvents = periodEvents.filter(e => e.startDate <= todayStr);
+  const sortedEvents = [...pastEvents].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
   const latestEvent = sortedEvents.length > 0 ? sortedEvents[0] : null;
 
   if (isPredicting) {
@@ -289,6 +300,16 @@ export default function Home() {
 
         {/* 2. Hero Circle */}
         <View style={styles.heroSection}>
+          {isPredicting && (
+            <Animated.View style={[StyleSheet.absoluteFill, { 
+              justifyContent: 'center', alignItems: 'center', zIndex: -1,
+              transform: [{ scale: rippleAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.8] }) }],
+              opacity: rippleAnim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0] })
+            }]}>
+              <View style={[styles.heroCircle, { backgroundColor: '#FF8A80', position: 'absolute' }]} />
+            </Animated.View>
+          )}
+
           <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
             <LinearGradient
               colors={circleColors}
