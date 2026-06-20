@@ -16,6 +16,14 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <title>LunaCare - Yêu Thương & Thấu Hiểu</title>
         <meta name="description" content="LunaCare là ứng dụng AI thông minh giúp theo dõi chu kỳ, chăm sóc sức khỏe sinh sản và gắn kết tình cảm vợ chồng." />
         
+        {/* PWA & iOS Safari Add to Home Screen */}
+        <link rel="icon" type="image/png" href="/icon.png" />
+        <link rel="apple-touch-icon" href="/icon.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="LunaCare" />
+
+        
         {/* Open Graph / Facebook / Zalo */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://lunacare-rho.vercel.app/" />
