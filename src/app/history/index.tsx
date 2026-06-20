@@ -6,6 +6,7 @@ import { colors } from '../../theme/colors';
 import { useCycleStore } from '../../store/useCycleStore';
 import { PeriodEvent } from '../../features/cycle/cycle.types';
 import { useToastStore } from '../../store/useToastStore';
+import { useAlertStore } from '../../store/useAlertStore';
 
 export default function HistoryEditScreen() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function HistoryEditScreen() {
   const handleSaveEdit = () => {
     if (!editingId) return;
     if (!editStart) {
-      Alert.alert('Lỗi', 'Ngày bắt đầu không được để trống.');
+      useAlertStore.getState().showAlert('Lỗi', 'Ngày bắt đầu không được để trống.');
       return;
     }
     
@@ -40,7 +41,7 @@ export default function HistoryEditScreen() {
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert(
+    useAlertStore.getState().showAlert(
       'Xóa kỳ kinh',
       'Bạn có chắc chắn muốn xóa dữ liệu của kỳ kinh này không?',
       [

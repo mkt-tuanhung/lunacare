@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadAvatarToR2 } from '../../lib/r2';
 import { scheduleSleepProtection, scheduleSmartGrocery } from '../../lib/notifications';
+import { useAlertStore } from '../../store/useAlertStore';
 
 const { width } = Dimensions.get('window');
 
@@ -270,15 +271,23 @@ export default function Home() {
         if (uploadedUrl) {
           updateAvatarUrl(uploadedUrl);
         } else {
-          Alert.alert("Lỗi", "Không thể upload ảnh lên Cloudflare R2 lúc này.");
+          useAlertStore.getState().showAlert("Lỗi", "Không thể upload ảnh lên Cloudflare R2 lúc này.");
         }
       }
     } catch (error) {
       console.error(error);
-      Alert.alert("Lỗi", "Có lỗi xảy ra khi chọn ảnh.");
+      useAlertStore.getState().showAlert("Lỗi", "Có lỗi xảy ra khi chọn ảnh.");
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleOpenNotifications = () => {
+    useAlertStore.getState().showAlert(
+      "Thông báo", 
+      "Hiện chưa có thông báo mới nào.",
+      [{ text: "Đóng", style: "cancel" }]
+    );
   };
 
   return (
@@ -297,7 +306,7 @@ export default function Home() {
             )}
           </Pressable>
           <Image source={require('../../../assets/images/iump_decor.png')} style={styles.appLogo} resizeMode="contain" />
-          <Pressable style={styles.notiBtn}>
+          <Pressable style={styles.notiBtn} onPress={handleOpenNotifications}>
             <Feather name="bell" size={24} color={colors.text} />
           </Pressable>
         </View>
@@ -424,7 +433,7 @@ export default function Home() {
                 <Switch
                   value={isAiModeEnabled}
                   onValueChange={(val) => {
-                    if (val) Alert.alert("Bật AI Mode", "Đã bật chế độ phân tích nâng cao của AI");
+                    if (val) useAlertStore.getState().showAlert("Bật AI Mode", "Đã bật chế độ phân tích nâng cao của AI");
                     toggleAiMode(val);
                   }}
                   trackColor={{ false: '#d1d1d1', true: '#FFCA28' }}

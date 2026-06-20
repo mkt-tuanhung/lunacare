@@ -8,6 +8,7 @@ import { useCycleStore } from '../../store/useCycleStore';
 import { supabase } from '../../lib/supabase';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { useAlertStore } from '../../store/useAlertStore';
 
 export default function ReportsScreen() {
   const router = useRouter();
@@ -139,11 +140,11 @@ export default function ReportsScreen() {
           UTI: 'com.adobe.pdf'
         });
       } else {
-        Alert.alert('Lỗi', 'Thiết bị của bạn không hỗ trợ chia sẻ file PDF.');
+        useAlertStore.getState().showAlert('Lỗi', 'Thiết bị của bạn không hỗ trợ chia sẻ file PDF.');
       }
     } catch (err) {
       console.error(err);
-      Alert.alert('Lỗi', 'Không thể tạo file PDF lúc này.');
+      useAlertStore.getState().showAlert('Lỗi', 'Không thể tạo file PDF lúc này.');
     } finally {
       setGenerating(false);
     }

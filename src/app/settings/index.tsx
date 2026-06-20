@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useCycleStore } from '../../store/useCycleStore';
 import { useToastStore } from '../../store/useToastStore';
+import { useAlertStore } from '../../store/useAlertStore';
 import PinPad from '../../components/PinPad';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadAvatarToR2 } from '../../lib/r2';
@@ -63,7 +64,7 @@ export default function Settings() {
         await doDelete();
       }
     } else {
-      Alert.alert(
+      useAlertStore.getState().showAlert(
         "Xóa dữ liệu ghi nhận",
         "Bạn có chắc chắn muốn xóa toàn bộ dữ liệu đã nhập? Trạng thái đăng nhập vẫn được giữ nguyên.",
         [
@@ -87,7 +88,7 @@ export default function Settings() {
         doLogout();
       }
     } else {
-      Alert.alert(
+      useAlertStore.getState().showAlert(
         "Đăng xuất",
         "Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?",
         [
@@ -141,7 +142,7 @@ export default function Settings() {
         sendReset();
       }
     } else {
-      Alert.alert(
+      useAlertStore.getState().showAlert(
         "Đổi mật khẩu",
         `Gửi email đặt lại mật khẩu tới hộp thư: ${userEmail}?`,
         [

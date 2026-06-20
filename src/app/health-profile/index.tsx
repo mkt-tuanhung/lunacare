@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useCycleStore } from '../../store/useCycleStore';
 import { supabase } from '../../lib/supabase';
+import { useAlertStore } from '../../store/useAlertStore';
 
 // Định nghĩa lại các câu hỏi để render form (Rút gọn từ Onboarding)
 const QUESTIONS = [
@@ -61,7 +62,7 @@ export default function HealthProfileScreen() {
     if (Platform.OS === 'web') {
       alert('Đã cập nhật Hồ sơ Sức khỏe & Tính toán lại chu kỳ!');
     } else {
-      Alert.alert('Thành công', 'Hồ sơ đã được cập nhật và Chu kỳ đã được tính toán lại.');
+      useAlertStore.getState().showAlert('Thành công', 'Hồ sơ đã được cập nhật và Chu kỳ đã được tính toán lại.');
     }
     router.back();
   };

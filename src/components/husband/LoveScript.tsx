@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Clipboard, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Clipboard } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAlertStore } from '../../store/useAlertStore';
 
 const tones = [
   { id: 'sweet', label: 'Ngọt ngào', icon: 'heart' },
@@ -36,7 +37,7 @@ export default function LoveScript() {
   const copyToClipboard = () => {
     if (generatedScript) {
       Clipboard.setString(generatedScript);
-      Alert.alert('Đã copy', 'Bạn có thể dán tin nhắn này vào Zalo/Messenger gửi cho vợ nhé!');
+      useAlertStore.getState().showAlert('Đã copy', 'Bạn có thể dán tin nhắn này vào Zalo/Messenger gửi cho vợ nhé!');
     }
   };
 
