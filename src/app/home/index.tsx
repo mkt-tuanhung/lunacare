@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Switch, Alert, Image, Platform, ActivityIndicator } from 'react-native';
-import { useEffect, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Switch, Alert, Image, Platform, ActivityIndicator, Animated } from 'react-native';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useCycleStore } from '../../store/useCycleStore';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useRouter, usePathname } from 'expo-router';
@@ -135,6 +135,29 @@ export default function Home() {
   const { profile, updateAvatarUrl } = useProfileStore();
   const [isUploading, setIsUploading] = useState(false);
   const router = useRouter();
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isPredicting) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(scaleAnim, {
+            toValue: 1.05,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          })
+        ])
+      ).start();
+    } else {
+      scaleAnim.stopAnimation();
+      scaleAnim.setValue(1);
+    }
+  }, [isPredicting, scaleAnim]);
 
   useEffect(() => {
     if (prediction?.predictedStartDate) {
@@ -159,8 +182,8 @@ export default function Home() {
   const latestEvent = sortedEvents.length > 0 ? sortedEvents[0] : null;
 
   if (isPredicting) {
-    statusTitle = 'AI đang phân tích...';
-    circleColors = ['#E1BEE7', '#CE93D8'];
+    statusTitle = 'Đang cập nhật thông tin dự đoán...';
+    circleColors = ['#FF8A80', '#FF5252'];
   } else if (prediction) {
     let isBleeding = false;
     let bleedingDay = 0;
@@ -264,20 +287,22 @@ export default function Home() {
 
         {/* 2. Hero Circle */}
         <View style={styles.heroSection}>
-          <LinearGradient
-            colors={circleColors}
-            style={styles.heroCircle}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Text style={styles.heroTitle}>{statusTitle}</Text>
-            {statusValue !== '' && (
-              <View style={styles.heroValueContainer}>
-                <Text style={[styles.heroValue, statusValue === 'Cao' && { fontSize: 50, marginBottom: 10 }]}>{statusValue}</Text>
-                {statusSub !== '' && <Text style={styles.heroSub}>{statusSub}</Text>}
-              </View>
-            )}
-          </LinearGradient>
+          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <LinearGradient
+              colors={circleColors}
+              style={styles.heroCircle}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={[styles.heroTitle, isPredicting && { fontSize: 16, textAlign: 'center', paddingHorizontal: 20 }]}>{statusTitle}</Text>
+              {statusValue !== '' && !isPredicting && (
+                <View style={styles.heroValueContainer}>
+                  <Text style={[styles.heroValue, statusValue === 'Cao' && { fontSize: 50, marginBottom: 10 }]}>{statusValue}</Text>
+                  {statusSub !== '' && <Text style={styles.heroSub}>{statusSub}</Text>}
+                </View>
+              )}
+            </LinearGradient>
+          </Animated.View>
           
           <Pressable style={styles.editPeriodBtn} onPress={() => router.push('/calendar')}>
             <Text style={styles.editPeriodText}>Sửa kỳ kinh</Text>

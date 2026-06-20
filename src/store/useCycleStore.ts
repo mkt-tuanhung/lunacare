@@ -124,6 +124,10 @@ export const useCycleStore = create<CycleState>()(
 
   calculatePrediction: async () => {
     set({ isPredicting: true });
+    
+    // Add artificial delay for UX (like Flo app animation)
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
     try {
       const { periodEvents, isAiModeEnabled } = get();
       const cycles = periodEvents.map(e => ({
