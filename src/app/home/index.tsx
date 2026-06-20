@@ -210,7 +210,7 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
         
         {/* Top App Bar */}
         <View style={styles.topAppBar}>
@@ -303,11 +303,6 @@ export default function Home() {
 
       </ScrollView>
 
-      {/* Floating Action Button (Optional) */}
-      <Pressable style={styles.fab} onPress={() => router.push('/log')}>
-        <Ionicons name="add" size={30} color="white" />
-      </Pressable>
-
       {/* 4. Bottom Tab Bar */}
       <BottomNavBar />
     </View>
@@ -315,13 +310,13 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  topAppBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 10 },
+  topAppBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 45 : 30, paddingBottom: 5 },
   profileBtn: { padding: 4 },
   avatarMock: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8F3F1', justifyContent: 'center', alignItems: 'center' },
   appTitle: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
   notiBtn: { padding: 4 },
 
-  weekCalendarContainer: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: colors.border },
+  weekCalendarContainer: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   monthHeader: { textAlign: 'center', fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 15 },
   weekRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20 },
   dayCol: { alignItems: 'center', width: 40 },
@@ -330,7 +325,7 @@ const styles = StyleSheet.create({
   dayCircleToday: { borderWidth: 2, borderColor: colors.primary, backgroundColor: colors.background },
   dayDate: { fontSize: 16, color: colors.text, fontWeight: '500' },
 
-  heroSection: { alignItems: 'center', paddingVertical: 40 },
+  heroSection: { alignItems: 'center', paddingVertical: 25 },
   heroCircle: { 
     width: 280, height: 280, borderRadius: 140, 
     justifyContent: 'center', alignItems: 'center',
