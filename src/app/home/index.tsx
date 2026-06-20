@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Switch, Alert, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Switch, Alert, Image, Platform, ActivityIndicator } from 'react-native';
 import { useEffect, useState, useMemo } from 'react';
 import { useCycleStore } from '../../store/useCycleStore';
 import { useProfileStore } from '../../store/useProfileStore';
@@ -6,6 +6,8 @@ import { useRouter, usePathname } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { Feather, Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadAvatarToR2 } from '../../lib/r2';
 
 const { width } = Dimensions.get('window');
 
@@ -130,7 +132,8 @@ const BottomNavBar = () => {
 // ---------------- Main Screen ----------------
 export default function Home() {
   const { periodEvents, prediction, isPredicting, calculatePrediction, isAiModeEnabled, toggleAiMode } = useCycleStore();
-  const profile = useProfileStore((state) => state.profile);
+  const { profile, updateAvatarUrl } = useProfileStore();
+  const [isUploading, setIsUploading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -208,16 +211,49 @@ export default function Home() {
     }
   }
 
+  const handlePickAvatar = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setIsUploading(true);
+        const uri = result.assets[0].uri;
+        const uploadedUrl = await uploadAvatarToR2(uri, profile?.uid || 'guest');
+        if (uploadedUrl) {
+          updateAvatarUrl(uploadedUrl);
+        } else {
+          Alert.alert("Lỗi", "Không thể upload ảnh lên Cloudflare R2 lúc này.");
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Lỗi", "Có lỗi xảy ra khi chọn ảnh.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
         
         {/* Top App Bar */}
         <View style={styles.topAppBar}>
-          <Pressable style={styles.profileBtn} onPress={() => router.push('/settings')}>
-            <View style={styles.avatarMock}><Text style={{fontSize: 20}}>👩</Text></View>
+          <Pressable style={styles.profileBtn} onPress={handlePickAvatar} disabled={isUploading}>
+            {isUploading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : profile?.avatarUrl ? (
+              <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarMock}><Text style={{fontSize: 20}}>👱‍♀️</Text></View>
+            )}
           </Pressable>
-          <Text style={styles.appTitle}>Iu MP</Text>
+          <Image source={require('../../assets/images/logo.png')} style={styles.appLogo} resizeMode="contain" />
           <Pressable style={styles.notiBtn}>
             <Feather name="bell" size={24} color={colors.text} />
           </Pressable>
@@ -316,9 +352,18 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   topAppBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 45 : 30, paddingBottom: 5 },
-  profileBtn: { padding: 4 },
+  profileBtn: { padding: 4, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   avatarMock: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8F3F1', justifyContent: 'center', alignItems: 'center' },
-  appTitle: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
+  avatarImage: { width: 36, height: 36, borderRadius: 18 },
+  appLogo: { 
+    height: 32, 
+    width: 100, 
+    shadowColor: '#FF4B72',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3
+  },
   notiBtn: { padding: 4 },
 
   weekCalendarContainer: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },

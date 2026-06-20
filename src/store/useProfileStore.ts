@@ -46,6 +46,7 @@ interface ProfileState {
   profile: {
     uid?: string;
     displayName: string;
+    avatarUrl?: string;
     onboardingCompleted: boolean;
     healthProfile: HealthProfile | null;
     role?: string;
@@ -56,6 +57,7 @@ interface ProfileState {
   } | null;
   setProfile: (profile: any) => void;
   updateHealthProfile: (data: Partial<HealthProfile>) => void;
+  updateAvatarUrl: (url: string) => void;
   setAppLockEnabled: (enabled: boolean, pin?: string) => void;
   setHideNotifications: (hide: boolean) => void;
   saveProfileToSupabase: () => Promise<void>;
@@ -78,6 +80,18 @@ export const useProfileStore = create<ProfileState>()(
       }
     };
   }),
+  updateAvatarUrl: (url) => {
+    set((state) => {
+      if (!state.profile) return state;
+      return {
+        profile: {
+          ...state.profile,
+          avatarUrl: url
+        }
+      };
+    });
+    get().saveProfileToSupabase();
+  },
   setAppLockEnabled: (enabled, pin) => {
     set((state) => {
       if (!state.profile) return state;
@@ -126,6 +140,7 @@ export const useProfileStore = create<ProfileState>()(
         .upsert({ 
           id: profile.uid, // UUID từ Supabase Auth
           display_name: profile.displayName,
+          avatar_url: profile.avatarUrl,
           is_onboarded: true,
           health_profile: allUserData
         });
