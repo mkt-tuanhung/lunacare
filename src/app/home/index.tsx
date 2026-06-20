@@ -198,23 +198,25 @@ export default function Home() {
       statusSub = 'Ngày';
       statusValue = bleedingDay.toString();
       circleColors = ['#FF758F', '#FF4B72']; // Pink-Red
-    } else if (prediction.fertileWindowStart && todayStr >= prediction.fertileWindowStart && todayStr <= prediction.fertileWindowEnd) {
-      // Fertile Window
+    } else if (todayStr <= prediction.ovulationDate) {
+      // Giai đoạn nang noãn (Trước rụng trứng)
+      const isFertile = prediction.fertileWindowStart && todayStr >= prediction.fertileWindowStart && todayStr <= prediction.fertileWindowEnd;
+
       if (todayStr === prediction.ovulationDate) {
         statusTitle = 'Ngày rụng trứng';
-        statusSub = 'Cơ hội thụ thai';
+        statusSub = 'Cơ hội thụ thai Cao';
         statusValue = 'Cao';
         circleColors = ['#00E5FF', '#00B8D4']; // Teal
       } else {
         const ovulDate = new Date(prediction.ovulationDate);
         const diffToOvul = Math.round((ovulDate.getTime() - todayTime) / (1000*60*60*24));
         statusTitle = 'Rụng trứng sau';
-        statusSub = 'ngày';
-        statusValue = diffToOvul > 0 ? diffToOvul.toString() : '0';
-        circleColors = ['#4DD0E1', '#00BCD4']; // Light Teal
+        statusValue = `${diffToOvul} ngày`;
+        statusSub = isFertile ? 'Cơ hội thụ thai: Cao' : 'Cơ hội thụ thai: Thấp (i)';
+        circleColors = isFertile ? ['#4DD0E1', '#00BCD4'] : ['#FFCDD2', '#F48FB1']; // Teal cho Dễ thụ thai, Hồng nhạt cho Thấp
       }
     } else {
-      // Normal Luteal / Follicular OR Delayed
+      // Giai đoạn hoàng thể (Sau rụng trứng)
       const nextStart = new Date(prediction.predictedStartDate).getTime();
       if (todayTime > nextStart) {
         // Trễ kinh
@@ -229,7 +231,7 @@ export default function Home() {
         statusTitle = 'Kỳ kinh dự kiến sau';
         statusSub = 'ngày';
         statusValue = daysToNext.toString();
-        circleColors = ['#FFCDD2', '#F48FB1']; // Soft Pink
+        circleColors = ['#E1BEE7', '#CE93D8']; // Purple nhạt
       }
     }
   }
