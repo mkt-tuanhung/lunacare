@@ -122,16 +122,17 @@ export default function Calendar() {
   const handleDayPress = (day: number) => {
     // Chuyển sang định dạng YYYY-MM-DD
     const dateStr = new Date(Date.UTC(year, month, day)).toISOString().split('T')[0];
+    togglePeriodDay(dateStr);
+  };
+
+  const handleDayLongPress = (day: number) => {
+    const dateStr = new Date(Date.UTC(year, month, day)).toISOString().split('T')[0];
     setSelectedDateStr(dateStr);
     
     const log = monthLogs.find(l => l.log_date === dateStr);
     setSelectedLog(log || null);
     setModalVisible(true);
   };
-
-  const isSelectedPeriodDay = selectedDateStr 
-    ? periodEvents.some(e => selectedDateStr >= e.startDate && selectedDateStr <= e.endDate) 
-    : false;
 
   return (
     <View style={styles.container}>
@@ -173,7 +174,13 @@ export default function Calendar() {
             {days.map(day => {
               const hasLog = monthLogs.some(l => l.log_date === new Date(Date.UTC(year, month, day)).toISOString().split('T')[0]);
               return (
-                <Pressable key={day} style={styles.dayCell} onPress={() => handleDayPress(day)}>
+                <Pressable 
+                  key={day} 
+                  style={styles.dayCell} 
+                  onPress={() => handleDayPress(day)}
+                  onLongPress={() => handleDayLongPress(day)}
+                  delayLongPress={300}
+                >
                   <View style={[styles.dayCircle, getDayStyle(day)]}>
                     <Text style={[styles.dayText, getDayTextStyle(day)]}>{day}</Text>
                   </View>
@@ -219,26 +226,11 @@ export default function Calendar() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Ngày {selectedDateStr ? new Date(selectedDateStr).toLocaleDateString('vi-VN') : ''}</Text>
+              <Text style={styles.modalTitle}>Nhật ký ngày {selectedDateStr ? new Date(selectedDateStr).toLocaleDateString('vi-VN') : ''}</Text>
               <Pressable onPress={() => setModalVisible(false)} style={styles.closeBtn}>
                 <Feather name="x" size={24} color={colors.text} />
               </Pressable>
             </View>
-            
-            {selectedDateStr && (
-              <Pressable 
-                style={[styles.toggleBtn, isSelectedPeriodDay ? styles.toggleBtnActive : styles.toggleBtnInactive]}
-                onPress={() => {
-                   togglePeriodDay(selectedDateStr);
-                   setModalVisible(false);
-                }}
-              >
-                <Feather name={isSelectedPeriodDay ? "x" : "check"} size={22} color={isSelectedPeriodDay ? "#D32F2F" : "white"} />
-                <Text style={[styles.toggleBtnText, isSelectedPeriodDay && { color: "#D32F2F" }]}>
-                  {isSelectedPeriodDay ? "Xóa ghi nhận ngày kinh này" : "Đánh dấu là ngày Hành kinh"}
-                </Text>
-              </Pressable>
-            )}
 
             {selectedLog ? (
               <ScrollView>
