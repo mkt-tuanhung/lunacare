@@ -287,7 +287,7 @@ export default function Home() {
         
         {/* Top App Bar */}
         <View style={styles.topAppBar}>
-          <Pressable style={styles.profileBtn} onPress={handlePickAvatar} disabled={isUploading}>
+          <Pressable style={styles.profileBtn} onPress={() => router.push('/settings')} disabled={isUploading}>
             {isUploading ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : profile?.avatarUrl ? (

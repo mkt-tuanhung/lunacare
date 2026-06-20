@@ -146,7 +146,7 @@ export default function LogToday() {
         .from('daily_logs')
         .select('id')
         .eq('user_id', profile.uid)
-        .eq('log_date', today)
+        .eq('log_date', logDate)
         .single();
 
       let dbError;
