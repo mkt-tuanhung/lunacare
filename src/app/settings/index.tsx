@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Switch, Alert, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useCycleStore } from '../../store/useCycleStore';
+import PinPad from '../../components/PinPad';
 
 export default function Settings() {
   const router = useRouter();
@@ -119,32 +120,47 @@ export default function Settings() {
     }
   };
 
-  const handleTogglePin = async (val: boolean) => {
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [setupStep, setSetupStep] = useState<1 | 2>(1);
+  const [tempPin, setTempPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [showPinRemove, setShowPinRemove] = useState(false);
+
+  const handleTogglePin = (val: boolean) => {
     if (val) {
-      try {
-        const LocalAuthentication = require('expo-local-authentication');
-        const hasHardware = await LocalAuthentication.hasHardwareAsync();
-        if (!hasHardware) {
-          alert('Thiết bị không hỗ trợ sinh trắc học hoặc mã khóa.');
-          return;
-        }
-        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-        if (!isEnrolled) {
-          alert('Bạn chưa thiết lập Face ID / Mã PIN trên máy này.');
-          return;
-        }
-        const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: 'Xác thực để bật khóa ứng dụng',
-          fallbackLabel: 'Dùng mã PIN'
-        });
-        if (result.success) {
-          profileStore.setAppLockEnabled(true);
-        }
-      } catch (e) {
-        console.warn(e);
-      }
+      setSetupStep(1);
+      setTempPin('');
+      setPinError('');
+      setShowPinSetup(true);
     } else {
+      setPinError('');
+      setShowPinRemove(true);
+    }
+  };
+
+  const handlePinSetupComplete = (pin: string) => {
+    if (setupStep === 1) {
+      setTempPin(pin);
+      setSetupStep(2);
+      setPinError('');
+    } else {
+      if (pin === tempPin) {
+        profileStore.setAppLockEnabled(true, pin);
+        setShowPinSetup(false);
+      } else {
+        setPinError('Mã PIN không khớp, thử lại');
+        setSetupStep(1);
+        setTempPin('');
+      }
+    }
+  };
+
+  const handlePinRemoveComplete = (pin: string) => {
+    if (pin === profileStore.profile?.appLockPin) {
       profileStore.setAppLockEnabled(false);
+      setShowPinRemove(false);
+    } else {
+      setPinError('Mã PIN không đúng.');
     }
   };
 
@@ -245,6 +261,28 @@ export default function Settings() {
 
         <Text style={styles.versionText}>For Embeiu v1.2.0 - Core Engine</Text>
       </ScrollView>
+
+      {/* PIN SETUP MODAL */}
+      <Modal visible={showPinSetup} animationType="slide" presentationStyle="pageSheet">
+        <PinPad 
+          title={setupStep === 1 ? 'Tạo mã PIN mới' : 'Xác nhận mã PIN'}
+          subtitle={setupStep === 1 ? 'Mã PIN này sẽ bảo vệ dữ liệu của bạn' : 'Vui lòng nhập lại mã PIN vừa tạo'}
+          error={pinError}
+          onComplete={handlePinSetupComplete}
+          onCancel={() => setShowPinSetup(false)}
+        />
+      </Modal>
+
+      {/* PIN REMOVE MODAL */}
+      <Modal visible={showPinRemove} animationType="slide" presentationStyle="pageSheet">
+        <PinPad 
+          title="Tắt khóa bảo vệ"
+          subtitle="Vui lòng nhập mã PIN hiện tại để tiếp tục"
+          error={pinError}
+          onComplete={handlePinRemoveComplete}
+          onCancel={() => setShowPinRemove(false)}
+        />
+      </Modal>
     </View>
   );
 }

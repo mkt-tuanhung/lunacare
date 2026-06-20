@@ -2,9 +2,9 @@ import { Stack, Redirect, useSegments } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
 import { loadSeedData } from '../data/seedData';
 import { useProfileStore } from '../store/useProfileStore';
-import { View, Text, AppState, StyleSheet, Pressable } from 'react-native';
+import { View, Text, AppState, StyleSheet, Pressable, Modal } from 'react-native';
 import CustomSplash from '../components/CustomSplash';
-import * as LocalAuthentication from 'expo-local-authentication';
+import PinPad from '../components/PinPad';
 import { Feather } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
@@ -16,25 +16,22 @@ export default function RootLayout() {
   const appState = useRef(AppState.currentState);
   const profile = useProfileStore((state) => state.profile);
 
-  const handleBiometricAuth = async () => {
-    try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Xác thực để mở LunaCare',
-        fallbackLabel: 'Sử dụng mật khẩu',
-        disableDeviceFallback: false,
-      });
-      if (result.success) {
-        setIsLocked(false);
-      }
-    } catch (e) {
-      console.warn(e);
+  const [pinError, setPinError] = useState('');
+
+  const handleUnlock = (pin: string) => {
+    const currentProfile = useProfileStore.getState().profile;
+    if (pin === currentProfile?.appLockPin) {
+      setIsLocked(false);
+      setPinError('');
+    } else {
+      setPinError('Mã PIN không đúng, thử lại');
     }
   };
 
   useEffect(() => {
     if (profile?.isAppLockEnabled) {
       setIsLocked(true);
-      handleBiometricAuth();
+      setPinError('');
     }
 
     const subscription = AppState.addEventListener('change', nextAppState => {
@@ -42,7 +39,7 @@ export default function RootLayout() {
         const currentProfile = useProfileStore.getState().profile;
         if (currentProfile?.isAppLockEnabled) {
           setIsLocked(true);
-          handleBiometricAuth();
+          setPinError('');
         }
       }
       appState.current = nextAppState;
@@ -70,14 +67,14 @@ export default function RootLayout() {
 
   if (isLocked) {
     return (
-      <View style={styles.lockContainer}>
-        <Feather name="lock" size={60} color={colors.primary} style={{marginBottom: 20}} />
-        <Text style={styles.lockTitle}>Ứng dụng đã bị khóa</Text>
-        <Text style={styles.lockDesc}>Vui lòng xác thực Face ID / Passcode để tiếp tục sử dụng.</Text>
-        <Pressable style={styles.unlockBtn} onPress={handleBiometricAuth}>
-          <Text style={styles.unlockBtnText}>Mở khóa</Text>
-        </Pressable>
-      </View>
+      <Modal visible={isLocked} animationType="fade">
+        <PinPad 
+          title="Ứng dụng đã bị khóa"
+          subtitle="Vui lòng nhập mã PIN để mở khóa"
+          error={pinError}
+          onComplete={handleUnlock}
+        />
+      </Modal>
     );
   }
 

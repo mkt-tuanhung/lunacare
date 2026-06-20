@@ -51,10 +51,11 @@ interface ProfileState {
     role?: string;
     partnerId?: string; // ID của vợ nếu người này là chồng
     isAppLockEnabled?: boolean;
+    appLockPin?: string;
   } | null;
   setProfile: (profile: any) => void;
   updateHealthProfile: (data: Partial<HealthProfile>) => void;
-  setAppLockEnabled: (enabled: boolean) => void;
+  setAppLockEnabled: (enabled: boolean, pin?: string) => void;
   saveProfileToSupabase: () => Promise<void>;
 }
 
@@ -75,12 +76,13 @@ export const useProfileStore = create<ProfileState>()(
       }
     };
   }),
-  setAppLockEnabled: (enabled) => set((state) => {
+  setAppLockEnabled: (enabled, pin) => set((state) => {
     if (!state.profile) return state;
     return {
       profile: {
         ...state.profile,
-        isAppLockEnabled: enabled
+        isAppLockEnabled: enabled,
+        appLockPin: pin !== undefined ? pin : state.profile.appLockPin
       }
     };
   }),
