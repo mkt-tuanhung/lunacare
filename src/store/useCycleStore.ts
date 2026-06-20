@@ -4,6 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfileStore } from './useProfileStore';
 import { PeriodEvent, CyclePrediction } from '../features/cycle/cycle.types';
 import { predictCycle } from '../features/cycle/cycle.engine';
+import { predictCycleWithAI } from '../features/cycle/ai.engine';
+import { supabase } from '../lib/supabase';
 
 interface CycleState {
   periodEvents: PeriodEvent[];
@@ -69,7 +71,6 @@ export const useCycleStore = create<CycleState>()(
       
       // Tải nhật ký gần nhất để cho Thuật toán tham khảo
       let recentLogs: any[] = [];
-      const { supabase } = require('../lib/supabase');
       const profileStore = useProfileStore.getState();
       if (profileStore.profile?.uid) {
         const { data } = await supabase.from('daily_logs').select('*').eq('user_id', profileStore.profile.uid).order('log_date', { ascending: false }).limit(1);
@@ -79,8 +80,6 @@ export const useCycleStore = create<CycleState>()(
       let finalPrediction: CyclePrediction | null = null;
 
       if (isAiModeEnabled) {
-        // IMPORT ĐỘNG TỪ ai.engine.ts
-        const { predictCycleWithAI } = require('../features/cycle/ai.engine');
         finalPrediction = await predictCycleWithAI(cycles);
       }
       
@@ -101,7 +100,6 @@ export const useCycleStore = create<CycleState>()(
       const cycles = periodEvents.map(e => ({ startDate: e.startDate, endDate: e.endDate }));
       
       let recentLogs: any[] = [];
-      const { supabase } = require('../lib/supabase');
       const profileStore = useProfileStore.getState();
       if (profileStore.profile?.uid) {
         const { data } = await supabase.from('daily_logs').select('*').eq('user_id', profileStore.profile.uid).order('log_date', { ascending: false }).limit(1);
