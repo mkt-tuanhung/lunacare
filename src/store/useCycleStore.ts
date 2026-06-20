@@ -16,8 +16,9 @@ interface CycleState {
   updatePeriodEvent: (id: string, updates: Partial<PeriodEvent>) => void;
   deletePeriodEvent: (id: string) => void;
   calculatePrediction: () => Promise<void>;
-  setPeriodEvents: (events: PeriodEvent[]) => void;
+  setPeriodEvents: (events: PeriodEvent[], skipSync?: boolean) => void;
   toggleAiMode: (enabled: boolean) => void;
+  syncEventsToSupabase: () => Promise<void>;
 }
 
 export const useCycleStore = create<CycleState>()(
@@ -40,6 +41,7 @@ export const useCycleStore = create<CycleState>()(
       return { periodEvents: newEvents };
     });
     get().calculatePrediction();
+    get().syncEventsToSupabase();
   },
 
   updatePeriodEvent: (id, updates) => {
@@ -50,6 +52,7 @@ export const useCycleStore = create<CycleState>()(
       return { periodEvents: newEvents };
     });
     get().calculatePrediction();
+    get().syncEventsToSupabase();
   },
 
   deletePeriodEvent: (id) => {
@@ -58,6 +61,7 @@ export const useCycleStore = create<CycleState>()(
       return { periodEvents: newEvents };
     });
     get().calculatePrediction();
+    get().syncEventsToSupabase();
   },
 
   calculatePrediction: async () => {
@@ -119,9 +123,26 @@ export const useCycleStore = create<CycleState>()(
     get().calculatePrediction();
   },
 
-  setPeriodEvents: (events) => {
+  setPeriodEvents: (events, skipSync = false) => {
     set({ periodEvents: events });
     get().calculatePrediction();
+    if (!skipSync) get().syncEventsToSupabase();
+  },
+
+  syncEventsToSupabase: async () => {
+    const profileStore = useProfileStore.getState();
+    if (!profileStore.profile?.uid) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ period_events: get().periodEvents })
+        .eq('id', profileStore.profile.uid);
+      if (error) throw error;
+      console.log("✅ Đã đồng bộ Lịch sử Chu kỳ kinh lên Supabase thành công!");
+    } catch (e) {
+      console.error("Lỗi khi lưu Chu kỳ lên Supabase:", e);
+    }
   }
     }),
     {

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { colors } from '../../theme/colors';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/useProfileStore';
+import { useCycleStore } from '../../store/useCycleStore';
 import { supabase } from '../../lib/supabase';
 
 export default function LoginWife() {
@@ -35,7 +36,7 @@ export default function LoginWife() {
         // Kiểm tra xem đã làm Onboarding chưa bằng cách kéo data từ bảng profiles
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('is_onboarded, health_profile, display_name, app_settings')
+          .select('is_onboarded, health_profile, display_name, app_settings, period_events')
           .eq('id', data.user.id)
           .single();
 
@@ -51,6 +52,10 @@ export default function LoginWife() {
           appLockPin: profileData?.app_settings?.appLockPin,
           hideNotifications: profileData?.app_settings?.hideNotifications,
         });
+
+        if (profileData?.period_events) {
+          useCycleStore.getState().setPeriodEvents(profileData.period_events, true);
+        }
 
         if (isOnboarded) {
           router.replace('/home');
