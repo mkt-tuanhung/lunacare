@@ -1,121 +1,146 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
-import { useProfileStore } from '../../store/useProfileStore';
+import { useCycleStore } from '../../store/useCycleStore';
+import { PeriodEvent } from '../../features/cycle/cycle.types';
+import { useToastStore } from '../../store/useToastStore';
 
-export default function HistoryScreen() {
+export default function HistoryEditScreen() {
   const router = useRouter();
-  const { profile } = useProfileStore();
-  const [logs, setLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { periodEvents, updatePeriodEvent, deletePeriodEvent } = useCycleStore();
+  const { showToast } = useToastStore();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editStart, setEditStart] = useState('');
+  const [editEnd, setEditEnd] = useState('');
 
-  useEffect(() => {
-    async function fetchHistory() {
-      if (!profile?.uid) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const { data, error } = await supabase
-          .from('daily_logs')
-          .select('*')
-          .eq('user_id', profile.uid)
-          .order('log_date', { ascending: false });
+  const sortedEvents = [...periodEvents].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
-        if (error) throw error;
-        setLogs(data || []);
-      } catch (err) {
-        console.error('Lỗi khi tải lịch sử:', err);
-      } finally {
-        setLoading(false);
-      }
+  const handleEdit = (event: PeriodEvent) => {
+    setEditingId(event.id);
+    setEditStart(event.startDate);
+    setEditEnd(event.endDate || '');
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingId) return;
+    if (!editStart) {
+      Alert.alert('Lỗi', 'Ngày bắt đầu không được để trống.');
+      return;
     }
-    fetchHistory();
-  }, [profile?.uid]);
+    
+    updatePeriodEvent(editingId, {
+      startDate: editStart,
+      endDate: editEnd || undefined
+    });
+    
+    setEditingId(null);
+    showToast('Đã cập nhật kỳ kinh thành công!', 'success');
+  };
 
-  const renderSymptomBadges = (symptoms: string[]) => {
-    if (!symptoms || symptoms.length === 0) return null;
-    return (
-      <View style={styles.badgeContainer}>
-        {symptoms.map(sym => (
-          <View key={sym} style={styles.badge}>
-            <Text style={styles.badgeText}>{sym}</Text>
-          </View>
-        ))}
-      </View>
+  const handleDelete = (id: string) => {
+    Alert.alert(
+      'Xóa kỳ kinh',
+      'Bạn có chắc chắn muốn xóa dữ liệu của kỳ kinh này không?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        { 
+          text: 'Xóa', 
+          style: 'destructive',
+          onPress: () => {
+            deletePeriodEvent(id);
+            showToast('Đã xóa kỳ kinh', 'info');
+          }
+        }
+      ]
     );
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={28} color={colors.text} />
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Feather name="arrow-left" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Lịch Sử Ghi Nhận</Text>
-        <View style={styles.backBtn} />
+        <Text style={styles.headerTitle}>Lịch sử Chu kỳ</Text>
+        <View style={{ width: 44 }} />
       </View>
 
-      {loading ? (
-        <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {logs.length === 0 ? (
-            <View style={styles.centerBox}>
-              <MaterialCommunityIcons name="note-text-outline" size={60} color={colors.textMuted} />
-              <Text style={styles.emptyText}>Chưa có ghi nhận nào</Text>
-              <Text style={styles.emptySub}>Hãy ghi nhận hàng ngày để theo dõi sức khỏe nhé.</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.subtitle}>Quản lý dữ liệu các kỳ kinh đã qua</Text>
+        
+        {sortedEvents.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Feather name="calendar" size={40} color={colors.textMuted} />
+            <Text style={styles.emptyText}>Chưa có dữ liệu kỳ kinh nào.</Text>
+          </View>
+        ) : (
+          sortedEvents.map(event => (
+            <View key={event.id} style={styles.eventCard}>
+              {editingId === event.id ? (
+                <View style={styles.editMode}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Ngày bắt đầu (YYYY-MM-DD):</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={editStart}
+                      onChangeText={setEditStart}
+                      placeholder="VD: 2023-10-01"
+                    />
+                  </View>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Ngày kết thúc (YYYY-MM-DD):</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={editEnd}
+                      onChangeText={setEditEnd}
+                      placeholder="VD: 2023-10-05"
+                    />
+                  </View>
+                  <View style={styles.actionRow}>
+                    <Pressable style={[styles.btn, styles.cancelBtn]} onPress={() => setEditingId(null)}>
+                      <Text style={styles.btnText}>Hủy</Text>
+                    </Pressable>
+                    <Pressable style={[styles.btn, styles.saveBtn]} onPress={handleSaveEdit}>
+                      <Text style={[styles.btnText, {color: 'white'}]}>Lưu lại</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.viewMode}>
+                  <View style={styles.dateInfo}>
+                    <View style={styles.dateCircle}>
+                      <Text style={styles.dateDay}>{new Date(event.startDate).getDate()}</Text>
+                      <Text style={styles.dateMonth}>Thg {new Date(event.startDate).getMonth() + 1}</Text>
+                    </View>
+                    <View style={styles.dateRange}>
+                      <Text style={styles.dateRangeText}>
+                        Từ: <Text style={{fontWeight: 'bold'}}>{event.startDate}</Text>
+                      </Text>
+                      {event.endDate ? (
+                        <Text style={styles.dateRangeText}>
+                          Đến: <Text style={{fontWeight: 'bold'}}>{event.endDate}</Text>
+                        </Text>
+                      ) : (
+                        <Text style={[styles.dateRangeText, {color: colors.primaryDark}]}>Đang diễn ra</Text>
+                      )}
+                    </View>
+                  </View>
+                  <View style={styles.actions}>
+                    <Pressable style={styles.iconBtn} onPress={() => handleEdit(event)}>
+                      <Feather name="edit-2" size={20} color={colors.text} />
+                    </Pressable>
+                    <Pressable style={styles.iconBtn} onPress={() => handleDelete(event.id)}>
+                      <Feather name="trash-2" size={20} color="#E53935" />
+                    </Pressable>
+                  </View>
+                </View>
+              )}
             </View>
-          ) : (
-            logs.map((log) => (
-              <View key={log.id} style={styles.logCard}>
-                <View style={styles.logHeader}>
-                  <View style={styles.dateBox}>
-                    <Feather name="calendar" size={16} color={colors.primary} />
-                    <Text style={styles.dateText}>{new Date(log.log_date).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}</Text>
-                  </View>
-                  {log.is_period_day && (
-                    <View style={styles.periodBadge}>
-                      <MaterialCommunityIcons name="water" size={14} color="#D32F2F" />
-                      <Text style={styles.periodBadgeText}>Có kinh</Text>
-                    </View>
-                  )}
-                </View>
-
-                {log.moods && log.moods.length > 0 && (
-                  <View style={styles.infoRow}>
-                    <Feather name="smile" size={18} color={colors.textMuted} />
-                    <Text style={styles.infoText}>Tâm trạng: <Text style={{fontWeight: '600'}}>{log.moods[0]}</Text></Text>
-                  </View>
-                )}
-
-                <View style={styles.statsRow}>
-                  {log.water_cups !== null && log.water_cups !== undefined && (
-                    <View style={styles.statBox}>
-                      <MaterialCommunityIcons name="cup-water" size={20} color="#2196F3" />
-                      <Text style={styles.statText}>{log.water_cups} ly</Text>
-                    </View>
-                  )}
-                  {log.sleep_hours !== null && log.sleep_hours !== undefined && (
-                    <View style={styles.statBox}>
-                      <Feather name="moon" size={18} color="#9C27B0" />
-                      <Text style={styles.statText}>{log.sleep_hours} giờ</Text>
-                    </View>
-                  )}
-                </View>
-
-                {renderSymptomBadges(log.symptoms)}
-              </View>
-            ))
-          )}
-        </ScrollView>
-      )}
+          ))
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -123,31 +148,36 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: colors.background },
-  backBtn: { width: 44, height: 44, justifyContent: 'center' },
+  backButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'flex-start' },
   headerTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
   
-  centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, marginTop: 100 },
-  loadingText: { marginTop: 15, fontSize: 16, color: colors.textMuted },
-  emptyText: { fontSize: 20, fontWeight: '700', color: colors.text, marginTop: 20, marginBottom: 8 },
-  emptySub: { fontSize: 15, color: colors.textMuted, textAlign: 'center' },
-
   scrollContent: { padding: 24, paddingBottom: 100 },
+  subtitle: { fontSize: 16, color: colors.textMuted, marginBottom: 20 },
   
-  logCard: { backgroundColor: colors.card, padding: 20, borderRadius: 24, marginBottom: 20, boxShadow: '0px 4px 16px rgba(0,0,0,0.04)' },
-  logHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  dateBox: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dateText: { fontSize: 16, fontWeight: '700', color: colors.text },
-  periodBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFEBEE', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, gap: 4 },
-  periodBadgeText: { fontSize: 12, fontWeight: '700', color: '#D32F2F' },
-
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  infoText: { fontSize: 15, color: colors.text },
-
-  statsRow: { flexDirection: 'row', gap: 15, marginBottom: 15 },
-  statBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, gap: 6 },
-  statText: { fontSize: 14, fontWeight: '600', color: colors.text },
-
-  badgeContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  badge: { backgroundColor: colors.primaryLight + '30', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
-  badgeText: { fontSize: 13, color: colors.primaryDark, fontWeight: '600' }
+  emptyBox: { padding: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderRadius: 20, marginTop: 40 },
+  emptyText: { marginTop: 10, color: colors.textMuted, fontSize: 16 },
+  
+  eventCard: { backgroundColor: colors.card, borderRadius: 20, padding: 20, marginBottom: 15, boxShadow: '0px 4px 15px rgba(0,0,0,0.05)' },
+  
+  viewMode: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  dateInfo: { flexDirection: 'row', alignItems: 'center' },
+  dateCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.primaryLight + '30', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  dateDay: { fontSize: 18, fontWeight: '800', color: colors.primaryDark },
+  dateMonth: { fontSize: 12, fontWeight: '600', color: colors.primaryDark },
+  dateRange: { justifyContent: 'center' },
+  dateRangeText: { fontSize: 15, color: colors.text, marginBottom: 2 },
+  
+  actions: { flexDirection: 'row' },
+  iconBtn: { padding: 10, marginLeft: 5, backgroundColor: colors.background, borderRadius: 10 },
+  
+  editMode: { width: '100%' },
+  inputGroup: { marginBottom: 15 },
+  label: { fontSize: 14, color: colors.textMuted, marginBottom: 5 },
+  input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, fontSize: 16, color: colors.text },
+  
+  actionRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 },
+  btn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, marginLeft: 10 },
+  cancelBtn: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
+  saveBtn: { backgroundColor: colors.primary },
+  btnText: { fontSize: 14, fontWeight: '600', color: colors.text }
 });

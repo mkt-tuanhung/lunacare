@@ -27,7 +27,8 @@ const symptoms = [
   { label: 'Đau lưng', icon: 'layers' }
 ];
 
-const ovulationSigns = ['Dịch nhầy trong', 'Nhiệt độ tăng', 'Que LH dương tính'];
+const cervicalMucusOptions = ['Khô', 'Dính', 'Kem', 'Nước', 'Lòng trắng trứng'];
+const lhTestOptions = ['Âm tính', 'Gần dương tính', 'Dương tính'];
 
 const flows = ['Nhẹ', 'Vừa', 'Nhiều', 'Rất nhiều'];
 const flowColors = ['Đỏ tươi', 'Đỏ sẫm', 'Nâu', 'Hồng'];
@@ -43,13 +44,17 @@ export default function LogToday() {
   
   const [waterCups, setWaterCups] = useState(0);
   const [sleepHours, setSleepHours] = useState('');
-  const [selectedOvulations, setSelectedOvulations] = useState<string[]>([]);
+  const [bbt, setBbt] = useState('');
+  const [cervicalMucus, setCervicalMucus] = useState<string | null>(null);
+  const [lhTest, setLhTest] = useState<string | null>(null);
   const [painScore, setPainScore] = useState(0);
   const [painLocations, setPainLocations] = useState<string[]>([]);
   const [energyScore, setEnergyScore] = useState<number | null>(null);
   const [flowColor, setFlowColor] = useState<string | null>(null);
   const [hasBloodClots, setHasBloodClots] = useState(false);
-  const [medications, setMedications] = useState('');
+  const [medicationName, setMedicationName] = useState('');
+  const [medicationDose, setMedicationDose] = useState('');
+  const [medicationTime, setMedicationTime] = useState('');
   const [notes, setNotes] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -59,9 +64,7 @@ export default function LogToday() {
     setSelectedSymptoms(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   };
   
-  const toggleOvulation = (s: string) => {
-    setSelectedOvulations(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
-  };
+
 
   const togglePainLocation = (s: string) => {
     setPainLocations(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
@@ -89,11 +92,11 @@ export default function LogToday() {
         symptoms: selectedSymptoms,
         water_cups: waterCups,
         sleep_hours: sleepHours ? parseFloat(sleepHours) : null,
-        ovulation_signs: selectedOvulations,
+        ovulation_signs: { bbt, cervicalMucus, lhTest },
         pain_score: painScore,
         pain_locations: painLocations,
         energy_score: energyScore,
-        medications: medications,
+        medications: { name: medicationName, dose: medicationDose, time: medicationTime },
         notes: notes,
         photo_url: photoUrl
       };
@@ -424,14 +427,36 @@ export default function LogToday() {
             <View style={[styles.iconBox, { backgroundColor: '#FFF3E0' }]}>
               <MaterialCommunityIcons name="egg-outline" size={20} color="#FF9800" />
             </View>
-            <Text style={styles.sectionTitle}>Dấu hiệu rụng trứng</Text>
+            <Text style={styles.sectionTitle}>Chỉ số Rụng trứng</Text>
           </View>
+          
+          <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 5 }}>Que thử rụng trứng (LH)</Text>
           <View style={styles.pillsContainer}>
-            {ovulationSigns.map(s => (
-              <Pressable key={s} style={[styles.pill, selectedOvulations.includes(s) && styles.pillActive]} onPress={() => toggleOvulation(s)}>
-                <Text style={[styles.pillText, selectedOvulations.includes(s) && styles.pillTextActive]}>{s}</Text>
+            {lhTestOptions.map(s => (
+              <Pressable key={s} style={[styles.pill, lhTest === s && styles.pillActive]} onPress={() => setLhTest(s === lhTest ? null : s)}>
+                <Text style={[styles.pillText, lhTest === s && styles.pillTextActive]}>{s}</Text>
               </Pressable>
             ))}
+          </View>
+
+          <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 5, marginTop: 15 }}>Dịch nhầy cổ tử cung</Text>
+          <View style={styles.pillsContainer}>
+            {cervicalMucusOptions.map(s => (
+              <Pressable key={s} style={[styles.pill, cervicalMucus === s && styles.pillActive]} onPress={() => setCervicalMucus(s === cervicalMucus ? null : s)}>
+                <Text style={[styles.pillText, cervicalMucus === s && styles.pillTextActive]}>{s}</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <View style={[styles.inputRow, {marginTop: 20}]}>
+            <Text style={styles.inputLabel}>Nhiệt độ cơ thể (BBT):</Text>
+            <TextInput
+              style={styles.textInput}
+              keyboardType="numeric"
+              placeholder="VD: 36.5"
+              value={bbt}
+              onChangeText={setBbt}
+            />
           </View>
         </View>
 
@@ -444,14 +469,33 @@ export default function LogToday() {
             <Text style={styles.sectionTitle}>Thuốc & Ghi chú</Text>
           </View>
           
-          <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 5 }}>Thuốc đã uống (Liều lượng/Lý do)</Text>
+          <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 5 }}>Tên thuốc (VD: Paracetamol)</Text>
           <TextInput
-            style={[styles.textInputFull, {minHeight: 60}]}
-            placeholder="VD: Paracetamol 500mg giảm đau"
-            multiline
-            value={medications}
-            onChangeText={setMedications}
+            style={[styles.textInputFull, {marginBottom: 10, paddingVertical: 12}]}
+            placeholder="Nhập tên thuốc..."
+            value={medicationName}
+            onChangeText={setMedicationName}
           />
+          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+            <View style={{flex: 1, marginRight: 5}}>
+              <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 5 }}>Liều lượng</Text>
+              <TextInput
+                style={[styles.textInputFull, {paddingVertical: 12}]}
+                placeholder="VD: 500mg"
+                value={medicationDose}
+                onChangeText={setMedicationDose}
+              />
+            </View>
+            <View style={{flex: 1, marginLeft: 5}}>
+              <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 5 }}>Giờ uống</Text>
+              <TextInput
+                style={[styles.textInputFull, {paddingVertical: 12}]}
+                placeholder="VD: 08:30"
+                value={medicationTime}
+                onChangeText={setMedicationTime}
+              />
+            </View>
+          </View>
           
           <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 5, marginTop: 15 }}>Ghi chú tự do</Text>
           <TextInput
