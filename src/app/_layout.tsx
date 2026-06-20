@@ -30,8 +30,20 @@ export default function RootLayout() {
   // thì sẽ bị tự động đá về màn hình Chọn Vai trò.
   // Các màn hình Auth (role, login, scan-qr) được phép truy cập tự do.
   const isAuthRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/auth');
-  if (!profile && !isAuthRoute && typeof window !== 'undefined' && window.location.pathname !== '/') {
+  const isRoot = typeof window !== 'undefined' && window.location.pathname === '/';
+  
+  if (!profile && !isAuthRoute && !isRoot) {
     return <Redirect href="/auth/role" />;
+  }
+
+  // Nếu ĐÃ ĐĂNG NHẬP mà lại vô tình mở lại trang auth (VD: share link /auth/role) -> Đá thẳng vào Dashboard
+  if (profile && isAuthRoute && typeof window !== 'undefined') {
+    if (!profile.onboardingCompleted) {
+      return <Redirect href="/onboarding" />;
+    } else {
+      if (profile.role === 'husband') return <Redirect href="/husband-dashboard" />;
+      return <Redirect href="/home" />;
+    }
   }
 
   return (
