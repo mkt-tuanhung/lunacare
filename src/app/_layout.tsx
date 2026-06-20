@@ -3,21 +3,26 @@ import { useEffect, useState } from 'react';
 import { loadSeedData } from '../data/seedData';
 import { useProfileStore } from '../store/useProfileStore';
 import { View, Text } from 'react-native';
+import CustomSplash from '../components/CustomSplash';
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const profile = useProfileStore((state) => state.profile);
 
   useEffect(() => {
     setIsReady(true);
+    
+    // Tắt intro màn hình chờ sau 1.5 giây
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
   }, []);
 
-  if (!isReady) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Loading LunaCare...</Text>
-      </View>
-    );
+  if (!isReady || showSplash) {
+    return <CustomSplash />;
   }
 
   // Bảo vệ route toàn cầu (Global Guard)
