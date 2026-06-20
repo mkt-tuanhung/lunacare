@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Switch, Alert } from 're
 import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { useProfileStore } from '../../store/useProfileStore';
@@ -12,6 +12,15 @@ export default function Settings() {
   const router = useRouter();
   const [isPinEnabled, setIsPinEnabled] = useState(false);
   const [hideNotifications, setHideNotifications] = useState(true);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user?.email) {
+        setUserEmail(data.user.email);
+      }
+    });
+  }, []);
 
   const handleDeleteData = async () => {
     const doDelete = async () => {
@@ -52,6 +61,58 @@ export default function Settings() {
         [
           { text: "Hủy", style: "cancel" },
           { text: "Xóa", style: "destructive", onPress: doDelete }
+        ]
+      );
+    }
+  };
+
+  const doLogout = async () => {
+    await supabase.auth.signOut();
+    useProfileStore.getState().setProfile(null);
+    useCycleStore.getState().setPeriodEvents([]);
+    router.replace('/auth/role');
+  };
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined' && window.confirm) {
+      if (window.confirm("Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?")) {
+        doLogout();
+      }
+    } else {
+      Alert.alert(
+        "Đăng xuất",
+        "Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?",
+        [
+          { text: "Hủy", style: "cancel" },
+          { text: "Đăng xuất", style: "destructive", onPress: doLogout }
+        ]
+      );
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!userEmail) return alert("Không tìm thấy email liên kết.");
+    const sendReset = async () => {
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(userEmail);
+        if (error) throw error;
+        alert("Đã gửi đường link đặt lại mật khẩu. Vui lòng kiểm tra hộp thư email của bạn.");
+      } catch (e: any) {
+        alert("Lỗi: " + e.message);
+      }
+    };
+
+    if (typeof window !== 'undefined' && window.confirm) {
+      if (window.confirm(`Gửi email đặt lại mật khẩu tới hộp thư: ${userEmail}?`)) {
+        sendReset();
+      }
+    } else {
+      Alert.alert(
+        "Đổi mật khẩu",
+        `Gửi email đặt lại mật khẩu tới hộp thư: ${userEmail}?`,
+        [
+          { text: "Hủy", style: "cancel" },
+          { text: "Gửi Email", onPress: sendReset }
         ]
       );
     }
@@ -113,6 +174,25 @@ export default function Settings() {
           <Pressable style={styles.row} onPress={handleDeleteData}>
             <View style={styles.rowIcon}><Feather name="trash-2" size={20} color="#F44336" /></View>
             <Text style={[styles.rowTitle, { flex: 1, color: '#F44336' }]}>Xóa toàn bộ dữ liệu</Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.sectionTitle}>Tài khoản</Text>
+        <View style={styles.card}>
+          <Pressable style={styles.row} onPress={handleChangePassword}>
+            <View style={styles.rowIcon}><Feather name="key" size={20} color={colors.text} /></View>
+            <View style={styles.rowInfo}>
+              <Text style={styles.rowTitle}>Đổi mật khẩu</Text>
+              <Text style={styles.rowDesc}>{userEmail || 'Đang tải email...'}</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={colors.textMuted} />
+          </Pressable>
+
+          <View style={styles.divider} />
+
+          <Pressable style={styles.row} onPress={handleLogout}>
+            <View style={styles.rowIcon}><Feather name="log-out" size={20} color="#F44336" /></View>
+            <Text style={[styles.rowTitle, { flex: 1, color: '#F44336' }]}>Đăng xuất</Text>
           </Pressable>
         </View>
 
