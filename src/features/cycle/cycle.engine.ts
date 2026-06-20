@@ -260,6 +260,49 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
   const pmsWindowStart = addDays(predictedStartDate, -7);
   const pmsWindowEnd = addDays(predictedStartDate, -1);
 
+  // 5. Tính toán Confidence Score dựa theo LunaCare.md (Mục 9.3)
+  let fluctuation = 0;
+  if (cleanCycleLengths.length >= 2) {
+    const max = Math.max(...cleanCycleLengths);
+    const min = Math.min(...cleanCycleLengths);
+    fluctuation = max - min;
+  }
+
+  let confidence: 'low' | 'medium' | 'high' = 'low';
+  let confidenceScore = 40;
+
+  if (sorted.length < 3) {
+    confidence = 'low';
+    confidenceScore = 30;
+    modifierNotes.push("Dự đoán có độ tin cậy thấp do chưa đủ dữ liệu 3 chu kỳ.");
+  } else if (fluctuation > 9) {
+    confidence = 'low';
+    confidenceScore = 40;
+    modifierNotes.push("Chu kỳ của bạn biến động khá lớn (>9 ngày), độ tin cậy dự đoán thấp.");
+  } else if (fluctuation >= 4 && fluctuation <= 9) {
+    confidence = 'medium';
+    confidenceScore = 65;
+  } else {
+    confidence = 'high';
+    confidenceScore = 90;
+  }
+
+  // Tăng confidence Rụng trứng nếu có dấu hiệu LH/BBT
+  const hasOvulationSigns = recentLogs.some(log => log.ovulation_signs && log.ovulation_signs.length > 0);
+  if (hasOvulationSigns) {
+    confidenceScore = Math.min(100, confidenceScore + 10);
+    if (confidence === 'low' && confidenceScore >= 50) confidence = 'medium';
+    modifierNotes.push("Dự đoán ngày rụng trứng chính xác hơn nhờ các dấu hiệu nhận biết rụng trứng của bạn.");
+  }
+
+  // Tăng confidence PMS nếu có nhiều log triệu chứng
+  const hasManySymptoms = recentLogs.filter(log => log.symptoms && log.symptoms.length > 0).length >= 3;
+  if (hasManySymptoms) {
+    confidenceScore = Math.min(100, confidenceScore + 5);
+    if (confidence === 'low' && confidenceScore >= 50) confidence = 'medium';
+    modifierNotes.push("Dự đoán hội chứng tiền kinh nguyệt (PMS) đáng tin cậy hơn nhờ dữ liệu triệu chứng của bạn.");
+  }
+
   // Đưa lời khuyên hàng ngày lên đầu ghi chú
   if (dailyAdvice.length > 0) {
     modifierNotes = [...dailyAdvice, ...modifierNotes];
@@ -275,8 +318,8 @@ export function predictCycle(cycles: Cycle[], recentLogs: any[] = []): CyclePred
     fertileWindowEnd,
     pmsWindowStart,
     pmsWindowEnd,
-    confidence: cleanCycleLengths.length > 3 ? "high" : "medium",
-    confidenceScore: cleanCycleLengths.length > 3 ? 90 : 65,
+    confidence,
+    confidenceScore,
     notes: modifierNotes.length > 0 ? modifierNotes : ["Dự đoán hoạt động ổn định."]
   };
 }
