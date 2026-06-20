@@ -217,7 +217,7 @@ export default function Home() {
           <Pressable style={styles.profileBtn} onPress={() => router.push('/settings')}>
             <View style={styles.avatarMock}><Text style={{fontSize: 20}}>👩</Text></View>
           </Pressable>
-          <Text style={styles.appTitle}>Luna</Text>
+          <Text style={styles.appTitle}>Iu MP</Text>
           <Pressable style={styles.notiBtn}>
             <Feather name="bell" size={24} color={colors.text} />
           </Pressable>
