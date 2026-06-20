@@ -23,10 +23,10 @@ export default function LoginWife() {
 
     try {
       if (isRegistering) {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         // Bắt ép vào thẳng Onboarding 20 câu hỏi sau khi đăng ký
-        setProfile({ uid: 'temp_wife_id', displayName: email.split('@')[0], onboardingCompleted: false, healthProfile: null, role: 'wife' });
+        setProfile({ uid: data.user?.id || 'temp_wife_id', displayName: email.split('@')[0], onboardingCompleted: false, healthProfile: null, role: 'wife' });
         router.replace('/onboarding');
       } else {
         const { error, data } = await supabase.auth.signInWithPassword({ email, password });
