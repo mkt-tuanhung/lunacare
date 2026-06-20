@@ -253,11 +253,11 @@ export default function Home() {
           <Text style={styles.sectionTitle}>Thông tin hàng ngày • Hôm nay</Text>
           
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 15 }}>
-            {/* Ghi triệu chứng */}
-            <Pressable style={[styles.insightCard, { backgroundColor: '#FFF0F3', borderColor: '#FFE4E8' }]} onPress={() => router.push('/log')}>
-              <Text style={styles.insightTitle}>Ghi nhận{'\n'}triệu chứng</Text>
+            {/* Sửa chu kỳ */}
+            <Pressable style={[styles.insightCard, { backgroundColor: '#FFF0F3', borderColor: '#FFE4E8' }]} onPress={() => router.push('/calendar')}>
+              <Text style={styles.insightTitle}>Thay đổi{'\n'}chu kỳ</Text>
               <View style={[styles.addIcon, { backgroundColor: '#FF4B72' }]}>
-                <Feather name="plus" size={20} color="white" />
+                <Feather name="edit-2" size={18} color="white" />
               </View>
             </Pressable>
 
@@ -302,6 +302,11 @@ export default function Home() {
         </View>
 
       </ScrollView>
+
+      {/* Floating Action Button (Dấu cộng bay) */}
+      <Pressable style={styles.fab} onPress={() => router.push('/log')}>
+        <Ionicons name="add" size={30} color="white" />
+      </Pressable>
 
       {/* 4. Bottom Tab Bar */}
       <BottomNavBar />
