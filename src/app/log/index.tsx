@@ -295,6 +295,8 @@ export default function LogToday() {
     } finally {
       setIsUploadingPhoto(false);
     }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>

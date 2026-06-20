@@ -388,6 +388,14 @@ export default function Home() {
               </View>
             </Pressable>
 
+            {/* Nhật ký Sức khoẻ */}
+            <Pressable style={[styles.insightCard, { backgroundColor: '#E8F5E9', borderColor: '#C8E6C9' }]} onPress={() => router.push('/history/logs')}>
+              <Text style={[styles.insightTitle, { color: '#2E7D32' }]}>Nhật ký{'\n'}Sức khoẻ</Text>
+              <View style={[styles.addIcon, { backgroundColor: '#4CAF50' }]}>
+                <Feather name="book-open" size={18} color="white" />
+              </View>
+            </Pressable>
+
             {/* AI Dự báo */}
             {prediction?.notes && prediction.notes.length > 0 && (
               <Pressable style={[styles.insightCard, { backgroundColor: '#F3E5F5', borderColor: '#E1BEE7', minWidth: 160 }]} onPress={() => router.push('/chat')}>

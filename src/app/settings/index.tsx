@@ -324,6 +324,14 @@ export default function Settings() {
 
           <View style={styles.divider} />
 
+          <Pressable style={styles.row} onPress={() => router.push('/history/logs')}>
+            <View style={styles.rowIcon}><Feather name="book-open" size={20} color={colors.text} /></View>
+            <Text style={[styles.rowTitle, { flex: 1 }]}>Nhật ký Ghi chú Hằng ngày</Text>
+            <Feather name="chevron-right" size={20} color={colors.textMuted} />
+          </Pressable>
+
+          <View style={styles.divider} />
+
           <Pressable style={styles.row} onPress={() => alert('Đã tạo file PDF!')}>
             <View style={styles.rowIcon}><Feather name="download" size={20} color={colors.text} /></View>
             <Text style={[styles.rowTitle, { flex: 1 }]}>Xuất dữ liệu</Text>
