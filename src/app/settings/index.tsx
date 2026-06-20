@@ -78,7 +78,11 @@ export default function Settings() {
   const doLogout = async () => {
     await supabase.auth.signOut();
     useProfileStore.getState().setProfile(null);
-    useCycleStore.getState().setPeriodEvents([]);
+    // skipSync = true để không ghi đè dữ liệu trên Supabase khi đăng xuất
+    useCycleStore.getState().setPeriodEvents([], true);
+    // Xóa cache local để tránh dữ liệu cũ hiện ra khi đăng nhập tài khoản khác
+    await AsyncStorage.removeItem('lunacare-profile-storage');
+    await AsyncStorage.removeItem('lunacare-cycle-storage');
     router.replace('/auth/role');
   };
 
