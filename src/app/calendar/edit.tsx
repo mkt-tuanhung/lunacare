@@ -1,139 +1,220 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { Feather } from '@expo/vector-icons';
 import { useCycleStore } from '../../store/useCycleStore';
 import { useProfileStore } from '../../store/useProfileStore';
+import { useState, useMemo, useEffect } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const { width } = Dimensions.get('window');
+const WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 export default function EditCycleScreen() {
   const router = useRouter();
-  const { periodEvents, updatePeriodEvent, deletePeriodEvent, addPeriodEvent } = useCycleStore();
+  const insets = useSafeAreaInsets();
+  const { periodEvents, setPeriodEvents } = useCycleStore();
   const { profile } = useProfileStore();
 
-  const sortedEvents = [...periodEvents].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+  // Khởi tạo mảng Draft từ periodEvents hiện tại
+  const initialDraft = useMemo(() => {
+    const draft = new Set<string>();
+    periodEvents.forEach(ev => {
+      let current = new Date(ev.startDate);
+      const end = new Date(ev.endDate);
+      while (current <= end) {
+        draft.add(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+      }
+    });
+    return draft;
+  }, [periodEvents]);
 
-  const adjustDate = (id: string, field: 'startDate' | 'endDate', currentValue: string | undefined, daysToAdd: number) => {
-    if (!currentValue && field === 'endDate') {
-        // If no end date, initialize it to start date
-        const event = periodEvents.find(e => e.id === id);
-        if (event) currentValue = event.startDate;
+  const [draftDays, setDraftDays] = useState<Set<string>>(initialDraft);
+
+  // Sinh ra mảng các tháng (vd: 6 tháng trước -> 3 tháng sau)
+  const monthsData = useMemo(() => {
+    const data = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = -6; i <= 3; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      data.push({
+        year: d.getFullYear(),
+        month: d.getMonth(),
+      });
     }
-    if (!currentValue) return;
+    return data;
+  }, []);
 
-    const date = new Date(currentValue);
-    date.setDate(date.getDate() + daysToAdd);
-    const newDateStr = date.toISOString().split('T')[0];
-
-    updatePeriodEvent(id, { [field]: newDateStr });
-  };
-
-  const handleAddNew = () => {
-    const today = new Date().toISOString().split('T')[0];
-    addPeriodEvent({
-      userId: profile?.uid || 'guest',
-      startDate: today,
-      endDate: today
+  const toggleDay = (dateStr: string) => {
+    setDraftDays(prev => {
+      const next = new Set(prev);
+      if (next.has(dateStr)) {
+        next.delete(dateStr);
+      } else {
+        next.add(dateStr);
+      }
+      return next;
     });
   };
 
-  const handleDelete = (id: string) => {
-    // Note: Alert.alert is mocked on Web, but works well enough. We can just use confirm on Web.
-    if (typeof window !== 'undefined' && window.confirm) {
-      if (window.confirm("Bạn có chắc chắn muốn xoá chu kỳ này?")) {
-        deletePeriodEvent(id);
-      }
-    } else {
-      Alert.alert("Xác nhận", "Bạn có chắc muốn xoá?", [
-        { text: "Hủy", style: "cancel" },
-        { text: "Xóa", style: "destructive", onPress: () => deletePeriodEvent(id) }
-      ]);
+  const handleSave = () => {
+    if (draftDays.size === 0) {
+      setPeriodEvents([]);
+      router.back();
+      return;
     }
+
+    const sortedDates = Array.from(draftDays).sort();
+    
+    const newEvents: any[] = [];
+    let currentStart = sortedDates[0];
+    let currentEnd = sortedDates[0];
+
+    for (let i = 1; i < sortedDates.length; i++) {
+      const prevDate = new Date(currentEnd);
+      const currDate = new Date(sortedDates[i]);
+      
+      const diffTime = currDate.getTime() - prevDate.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) {
+        // Liền kề -> Nối tiếp
+        currentEnd = sortedDates[i];
+      } else {
+        // Cắt đứt -> Lưu cụm trước và bắt đầu cụm mới
+        newEvents.push({
+          id: Date.now().toString(36) + Math.random().toString(36).substring(2),
+          userId: profile?.uid || 'guest',
+          startDate: currentStart,
+          endDate: currentEnd,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        currentStart = sortedDates[i];
+        currentEnd = sortedDates[i];
+      }
+    }
+
+    // Đẩy cụm cuối cùng vào
+    newEvents.push({
+      id: Date.now().toString(36) + Math.random().toString(36).substring(2),
+      userId: profile?.uid || 'guest',
+      startDate: currentStart,
+      endDate: currentEnd,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    setPeriodEvents(newEvents);
+    router.back();
   };
 
+  const todayStr = new Date().toISOString().split('T')[0];
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Top Bar (Cố định kiểu iOS) */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={28} color={colors.text} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Chỉnh sửa chu kỳ</Text>
-        <Pressable style={styles.backBtn} onPress={handleAddNew}>
-          <Feather name="plus" size={24} color={colors.primary} />
-        </Pressable>
+        <View style={styles.headerLeft}></View>
+        <Text style={styles.headerTitle}>Chỉnh sửa kỳ kinh</Text>
+        <View style={styles.headerRight}></View>
+      </View>
+
+      <View style={styles.weekdaysHeader}>
+        {WEEKDAYS.map(day => (
+          <Text key={day} style={styles.weekdayText}>{day}</Text>
+        ))}
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.infoBox}>
-          <Feather name="info" size={20} color={colors.primary} />
-          <Text style={styles.infoText}>Bấm vào các nút +/- để tinh chỉnh ngày bắt đầu và kết thúc của từng chu kỳ.</Text>
-        </View>
+        {monthsData.map((m, idx) => {
+          const daysInMonth = new Date(m.year, m.month + 1, 0).getDate();
+          const firstDayOfMonth = new Date(m.year, m.month, 1).getDay();
+          const startOffset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
 
-        {sortedEvents.length === 0 ? (
-          <Text style={styles.emptyText}>Bạn chưa ghi nhận chu kỳ nào.</Text>
-        ) : (
-          sortedEvents.map(event => (
-            <View key={event.id} style={styles.eventCard}>
-              <View style={styles.eventHeader}>
-                <Text style={styles.eventTitle}>Chu kỳ tháng {new Date(event.startDate).getMonth() + 1}</Text>
-                <Pressable onPress={() => handleDelete(event.id)}>
-                  <Feather name="trash-2" size={20} color="#F44336" />
-                </Pressable>
+          const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+          return (
+            <View key={`${m.year}-${m.month}`} style={styles.monthContainer}>
+              <View style={styles.monthTitleRow}>
+                <Text style={styles.monthTitleText}>Tháng {m.month + 1}</Text>
               </View>
+              
+              <View style={styles.daysGrid}>
+                {Array.from({ length: startOffset }).map((_, i) => (
+                  <View key={`pad-${i}`} style={styles.dayCell} />
+                ))}
+                
+                {days.map(day => {
+                  const dateStr = new Date(Date.UTC(m.year, m.month, day)).toISOString().split('T')[0];
+                  const isSelected = draftDays.has(dateStr);
+                  const isToday = dateStr === todayStr;
 
-              <View style={styles.dateRow}>
-                <Text style={styles.dateLabel}>Bắt đầu:</Text>
-                <View style={styles.adjuster}>
-                  <Pressable style={styles.adjustBtn} onPress={() => adjustDate(event.id, 'startDate', event.startDate, -1)}>
-                    <Feather name="minus" size={16} color={colors.text} />
-                  </Pressable>
-                  <Text style={styles.dateValue}>{new Date(event.startDate).toLocaleDateString('vi-VN')}</Text>
-                  <Pressable style={styles.adjustBtn} onPress={() => adjustDate(event.id, 'startDate', event.startDate, 1)}>
-                    <Feather name="plus" size={16} color={colors.text} />
-                  </Pressable>
-                </View>
+                  return (
+                    <Pressable key={day} style={styles.dayCell} onPress={() => toggleDay(dateStr)}>
+                      {isToday && <Text style={styles.todayLabel}>HÔM NAY</Text>}
+                      <Text style={[styles.dayNum, isSelected && { color: colors.primary, fontWeight: '700' }]}>{day}</Text>
+                      
+                      <View style={[styles.circle, isSelected ? styles.circleSelected : styles.circleEmpty]}>
+                        {isSelected && <Feather name="check" size={14} color="white" />}
+                      </View>
+                    </Pressable>
+                  );
+                })}
               </View>
-
-              <View style={styles.dateRow}>
-                <Text style={styles.dateLabel}>Kết thúc:</Text>
-                <View style={styles.adjuster}>
-                  <Pressable style={styles.adjustBtn} onPress={() => adjustDate(event.id, 'endDate', event.endDate, -1)}>
-                    <Feather name="minus" size={16} color={colors.text} />
-                  </Pressable>
-                  <Text style={styles.dateValue}>{event.endDate ? new Date(event.endDate).toLocaleDateString('vi-VN') : 'Đang diễn ra'}</Text>
-                  <Pressable style={styles.adjustBtn} onPress={() => adjustDate(event.id, 'endDate', event.endDate, 1)}>
-                    <Feather name="plus" size={16} color={colors.text} />
-                  </Pressable>
-                </View>
-              </View>
-
             </View>
-          ))
-        )}
+          );
+        })}
       </ScrollView>
+
+      {/* Bottom Bar */}
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom || 20 }]}>
+        <Pressable onPress={() => router.back()} style={styles.bottomBtn}>
+          <Text style={styles.cancelText}>Huỷ</Text>
+        </Pressable>
+        <Pressable onPress={handleSave} style={styles.bottomBtn}>
+          <Text style={styles.saveText}>Lưu</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: colors.background },
-  backBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
-  scrollContent: { padding: 24, paddingBottom: 100 },
+  container: { flex: 1, backgroundColor: 'white' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, height: 60, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
+  headerLeft: { width: 50 },
+  headerRight: { width: 50, alignItems: 'flex-end' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
   
-  infoBox: { flexDirection: 'row', backgroundColor: colors.primaryLight + '20', padding: 15, borderRadius: 12, marginBottom: 20, alignItems: 'center', gap: 10 },
-  infoText: { flex: 1, fontSize: 14, color: colors.primaryDark, lineHeight: 20 },
+  weekdaysHeader: { flexDirection: 'row', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
+  weekdayText: { width: '14.28%', textAlign: 'center', fontSize: 12, fontWeight: '500', color: colors.textMuted },
   
-  emptyText: { textAlign: 'center', marginTop: 50, color: colors.textMuted, fontSize: 16 },
+  scrollContent: { paddingBottom: 100 },
 
-  eventCard: { backgroundColor: colors.card, padding: 20, borderRadius: 20, marginBottom: 15, borderWidth: 1, borderColor: '#F0F0F0', boxShadow: '0px 4px 12px rgba(0,0,0,0.03)' },
-  eventHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
-  eventTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
+  monthContainer: { borderBottomWidth: 1, borderBottomColor: '#F5F5F5', paddingBottom: 20 },
+  monthTitleRow: { alignItems: 'center', paddingVertical: 15 },
+  monthTitleText: { fontSize: 18, fontWeight: '700', color: colors.text },
+
+  daysGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  dayCell: { width: '14.28%', alignItems: 'center', height: 75, justifyContent: 'center' },
   
-  dateRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  dateLabel: { fontSize: 15, color: colors.textMuted, fontWeight: '600' },
+  todayLabel: { fontSize: 10, fontWeight: '800', color: colors.text, position: 'absolute', top: 5 },
+  dayNum: { fontSize: 17, fontWeight: '500', color: colors.text, marginBottom: 8, marginTop: 10 },
   
-  adjuster: { flexDirection: 'row', alignItems: 'center', gap: 15 },
-  adjustBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
-  dateValue: { fontSize: 16, fontWeight: '700', color: colors.text, minWidth: 90, textAlign: 'center' }
+  circle: { width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
+  circleEmpty: { borderWidth: 2, borderColor: '#E0E0E0', backgroundColor: 'transparent' },
+  circleSelected: { backgroundColor: '#FF4B72', borderWidth: 0 },
+
+  bottomBar: { 
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', 
+    backgroundColor: 'white', paddingHorizontal: 20, paddingTop: 15,
+    borderTopWidth: 1, borderTopColor: '#F0F0F0'
+  },
+  bottomBtn: { padding: 10 },
+  cancelText: { fontSize: 17, fontWeight: '500', color: '#FF4B72' },
+  saveText: { fontSize: 17, fontWeight: '700', color: '#FF4B72' }
 });
