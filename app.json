@@ -8,7 +8,10 @@
     "scheme": "lunacare",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "LunaCare cần sử dụng Face ID để bảo mật dữ liệu riêng tư của bạn."
+      }
     },
     "android": {
       "adaptiveIcon": {

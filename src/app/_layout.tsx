@@ -1,14 +1,56 @@
 import { Stack, Redirect, useSegments } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { loadSeedData } from '../data/seedData';
 import { useProfileStore } from '../store/useProfileStore';
-import { View, Text } from 'react-native';
+import { View, Text, AppState, StyleSheet, Pressable } from 'react-native';
 import CustomSplash from '../components/CustomSplash';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { Feather } from '@expo/vector-icons';
+import { colors } from '../theme/colors';
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  const [isLocked, setIsLocked] = useState(false);
+  const appState = useRef(AppState.currentState);
   const profile = useProfileStore((state) => state.profile);
+
+  const handleBiometricAuth = async () => {
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Xác thực để mở LunaCare',
+        fallbackLabel: 'Sử dụng mật khẩu',
+        disableDeviceFallback: false,
+      });
+      if (result.success) {
+        setIsLocked(false);
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  useEffect(() => {
+    if (profile?.isAppLockEnabled) {
+      setIsLocked(true);
+      handleBiometricAuth();
+    }
+
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        const currentProfile = useProfileStore.getState().profile;
+        if (currentProfile?.isAppLockEnabled) {
+          setIsLocked(true);
+          handleBiometricAuth();
+        }
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [profile?.isAppLockEnabled]);
 
   useEffect(() => {
     setIsReady(true);
@@ -23,6 +65,19 @@ export default function RootLayout() {
 
   if (!isReady || showSplash) {
     return <CustomSplash />;
+  }
+
+  if (isLocked) {
+    return (
+      <View style={styles.lockContainer}>
+        <Feather name="lock" size={60} color={colors.primary} style={{marginBottom: 20}} />
+        <Text style={styles.lockTitle}>Ứng dụng đã bị khóa</Text>
+        <Text style={styles.lockDesc}>Vui lòng xác thực Face ID / Passcode để tiếp tục sử dụng.</Text>
+        <Pressable style={styles.unlockBtn} onPress={handleBiometricAuth}>
+          <Text style={styles.unlockBtnText}>Mở khóa</Text>
+        </Pressable>
+      </View>
+    );
   }
 
   // Bảo vệ route toàn cầu (Global Guard)
@@ -64,3 +119,36 @@ export default function RootLayout() {
     </Stack>
   );
 }
+
+const styles = StyleSheet.create({
+  lockContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 30,
+  },
+  lockTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 10,
+  },
+  lockDesc: {
+    fontSize: 15,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: 40,
+  },
+  unlockBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: 16,
+    paddingHorizontal: 40,
+    borderRadius: 30,
+  },
+  unlockBtnText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  }
+});

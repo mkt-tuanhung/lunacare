@@ -10,7 +10,8 @@ import { useCycleStore } from '../../store/useCycleStore';
 
 export default function Settings() {
   const router = useRouter();
-  const [isPinEnabled, setIsPinEnabled] = useState(false);
+  const profileStore = useProfileStore();
+  const isPinEnabled = profileStore.profile?.isAppLockEnabled || false;
   const [hideNotifications, setHideNotifications] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
@@ -118,6 +119,35 @@ export default function Settings() {
     }
   };
 
+  const handleTogglePin = async (val: boolean) => {
+    if (val) {
+      try {
+        const LocalAuthentication = require('expo-local-authentication');
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        if (!hasHardware) {
+          alert('Thiết bị không hỗ trợ sinh trắc học hoặc mã khóa.');
+          return;
+        }
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        if (!isEnrolled) {
+          alert('Bạn chưa thiết lập Face ID / Mã PIN trên máy này.');
+          return;
+        }
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'Xác thực để bật khóa ứng dụng',
+          fallbackLabel: 'Dùng mã PIN'
+        });
+        if (result.success) {
+          profileStore.setAppLockEnabled(true);
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+    } else {
+      profileStore.setAppLockEnabled(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -138,7 +168,7 @@ export default function Settings() {
               <Text style={styles.rowTitle}>Khóa bằng mã PIN / Face ID</Text>
               <Text style={styles.rowDesc}>Bảo vệ dữ liệu khi mở ứng dụng</Text>
             </View>
-            <Switch value={isPinEnabled} onValueChange={setIsPinEnabled} trackColor={{ false: '#E0E0E0', true: colors.primary }} />
+            <Switch value={isPinEnabled} onValueChange={handleTogglePin} trackColor={{ false: '#E0E0E0', true: colors.primary }} />
           </View>
           
           <View style={styles.divider} />

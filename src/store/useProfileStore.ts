@@ -50,9 +50,11 @@ interface ProfileState {
     healthProfile: HealthProfile | null;
     role?: string;
     partnerId?: string; // ID của vợ nếu người này là chồng
+    isAppLockEnabled?: boolean;
   } | null;
   setProfile: (profile: any) => void;
   updateHealthProfile: (data: Partial<HealthProfile>) => void;
+  setAppLockEnabled: (enabled: boolean) => void;
   saveProfileToSupabase: () => Promise<void>;
 }
 
@@ -70,6 +72,15 @@ export const useProfileStore = create<ProfileState>()(
           ...(state.profile.healthProfile as HealthProfile),
           ...data
         }
+      }
+    };
+  }),
+  setAppLockEnabled: (enabled) => set((state) => {
+    if (!state.profile) return state;
+    return {
+      profile: {
+        ...state.profile,
+        isAppLockEnabled: enabled
       }
     };
   }),
