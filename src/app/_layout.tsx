@@ -110,7 +110,7 @@ export default function RootLayout() {
   return (
     <CustomAlertProvider>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Stack screenOptions={{ headerShown: false }}>
+        <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="auth/role" />
           <Stack.Screen name="auth/login" />

@@ -237,6 +237,13 @@ export default function Home() {
     }
   };
 
+  const handleDeletePhoto = (index: number) => {
+    Alert.alert('Xoá ảnh', 'Bạn có chắc chắn muốn xoá ảnh này khỏi album?', [
+      { text: 'Huỷ', style: 'cancel' },
+      { text: 'Xoá', style: 'destructive', onPress: () => useProfileStore.getState().removeAlbumPhoto(index) }
+    ]);
+  };
+
   useEffect(() => {
     // Breathing animation for the central circle
     Animated.loop(
@@ -570,6 +577,12 @@ export default function Home() {
                     transform: [{ rotate: idx % 2 === 0 ? '-2deg' : '2deg' }]
                  }}>
                    <Image source={{uri: url}} style={styles.albumImage} />
+                   <Pressable 
+                     style={{ position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, borderRadius: 20 }}
+                     onPress={() => handleDeletePhoto(idx)}
+                   >
+                     <Feather name="trash-2" size={18} color="white" />
+                   </Pressable>
                  </Animated.View>
                ))
             ) : (
