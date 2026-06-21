@@ -33,16 +33,23 @@ export const uploadImageToR2 = async (fileUri: string | Blob, userId: string, fo
     let ext = 'jpg';
 
     if (typeof fileUri === 'string') {
-      const response = await fetch(fileUri);
-      blob = await response.blob();
-      
-      if (blob.type) {
-        ext = blob.type.split('/')[1] || 'jpg';
-      } else if (fileUri.includes('.')) {
-        const parts = fileUri.split('.');
-        const possibleExt = parts[parts.length - 1];
-        if (possibleExt.length <= 4 && !possibleExt.includes('/')) {
-          ext = possibleExt;
+      if (fileUri.startsWith('data:')) {
+        // Xử lý thủ công data URI để tránh lỗi fetch(dataURI) trên Safari
+        const arr = fileUri.split(',');
+        const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        blob = new Blob([u8arr], { type: mime });
+        ext = mime.split('/')[1] || 'jpg';
+      } else {
+        const response = await fetch(fileUri);
+        blob = await response.blob();
+        if (blob.type) {
+          ext = blob.type.split('/')[1] || 'jpg';
         }
       }
     } else {
@@ -88,7 +95,9 @@ export const uploadImageToR2 = async (fileUri: string | Blob, userId: string, fo
   } catch (error: any) {
     console.error("Lỗi khi upload ảnh lên R2:", error);
     if (typeof window !== 'undefined') {
-      window.alert("Lỗi chi tiết khi upload R2: " + (error.message || error.toString()) + "\nNếu là lỗi 'Failed to fetch', hãy kiểm tra cấu hình CORS trên Cloudflare R2.");
+      // @ts-ignore - lấy url từ scope trên nếu có để debug
+      const url = typeof command !== 'undefined' ? R2_ENDPOINT : 'unknown';
+      window.alert("Lỗi R2: " + (error.message || error.toString()) + "\nURL: " + url + "\nCheck CORS OPTIONS method or HTTP/HTTPS.");
     }
     return null;
   }
