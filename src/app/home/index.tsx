@@ -12,6 +12,60 @@ import { scheduleSleepProtection, scheduleSmartGrocery } from '../../lib/notific
 import { useAlertStore } from '../../store/useAlertStore';
 import LottieView from 'lottie-react-native';
 
+const HeartBubble = ({ delay }: { delay: number }) => {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  // Use a fixed random seed for consistent but varied paths per bubble instance
+  const randomX = useMemo(() => 20 + Math.random() * 25, []);
+  const randomY = useMemo(() => -10 - Math.random() * 20, []);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+        })
+      ])
+    ).start();
+  }, [anim, delay]);
+
+  const translateX = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, randomX]
+  });
+
+  const translateY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, randomY]
+  });
+
+  const scale = anim.interpolate({
+    inputRange: [0, 0.2, 0.8, 1],
+    outputRange: [0.2, 1, 1.4, 1.6]
+  });
+
+  const opacity = anim.interpolate({
+    inputRange: [0, 0.1, 0.6, 1],
+    outputRange: [0, 0.8, 0.5, 0]
+  });
+
+  return (
+    <Animated.View style={{
+      position: 'absolute',
+      right: 0,
+      top: 5,
+      transform: [{ translateX }, { translateY }, { scale }],
+      opacity,
+      zIndex: 1
+    }}>
+      <Ionicons name="heart" size={10} color="#FF80AB" />
+    </Animated.View>
+  );
+};
+
 const { width } = Dimensions.get('window');
 
 // ---------------- Helper: Format Date ----------------
@@ -415,7 +469,12 @@ export default function Home() {
             </Animated.View>
           </View>
           
-          <Image source={require('../../../assets/images/iump_decor.png')} style={styles.appLogo} resizeMode="contain" />
+          <View style={{ position: 'relative' }}>
+            <Image source={require('../../../assets/images/iump_decor.png')} style={styles.appLogo} resizeMode="contain" />
+            <HeartBubble delay={0} />
+            <HeartBubble delay={1000} />
+            <HeartBubble delay={2000} />
+          </View>
           <Pressable style={styles.notiBtn} onPress={handleOpenNotifications}>
             <Feather name="bell" size={24} color={colors.text} />
           </Pressable>
