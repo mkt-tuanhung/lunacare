@@ -212,6 +212,25 @@ export default function Home() {
   const moodBubbleAnim = useRef(new Animated.Value(0)).current;
   const moodFloatAnim = useRef(new Animated.Value(0)).current;
   const scrollX = useRef(new Animated.Value(0)).current;
+  const zoomAnim = useRef(new Animated.Value(0)).current;
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  const openImage = (url: string) => {
+    setSelectedImage(url);
+    Animated.spring(zoomAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      bounciness: 10
+    }).start();
+  };
+
+  const closeImage = () => {
+    Animated.timing(zoomAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true
+    }).start(() => setSelectedImage(null));
+  };
 
   // Lottie Files array
   const moodLotties = [
@@ -304,7 +323,7 @@ export default function Home() {
   };
 
   const handleDeletePhoto = (index: number) => {
-    Alert.alert('Xoá ảnh', 'Bạn có chắc chắn muốn xoá ảnh này khỏi album?', [
+    useAlertStore.getState().showAlert('Xoá ảnh', 'Bạn có chắc chắn muốn xoá ảnh này khỏi album?', [
       { text: 'Huỷ', style: 'cancel' },
       { text: 'Xoá', style: 'destructive', onPress: () => useProfileStore.getState().removeAlbumPhoto(index) }
     ]);
@@ -675,9 +694,12 @@ export default function Home() {
                       opacity,
                       transform: [{ perspective: 1000 }, { rotateY }, { scale }]
                    }}>
-                     <Image source={{uri: url}} style={styles.albumImage} />
+                     <Pressable onPress={() => openImage(url)} style={{flex: 1}}>
+                       <Image source={{uri: url}} style={styles.albumImage} />
+                     </Pressable>
                      <Pressable 
-                       style={{ position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.6)', padding: 8, borderRadius: 20, zIndex: 10 }}
+                       style={{ position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.6)', padding: 12, borderRadius: 20, zIndex: 100, elevation: 100 }}
+                       hitSlop={15}
                        onPress={() => handleDeletePhoto(idx)}
                      >
                        <Feather name="trash-2" size={18} color="white" />
@@ -703,6 +725,25 @@ export default function Home() {
 
       {/* 4. Bottom Tab Bar */}
       <BottomNavBar />
+
+      {/* 5. Full Screen Image Viewer */}
+      {selectedImage && (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 9999, justifyContent: 'center', alignItems: 'center' }]}>
+          <Pressable style={{ position: 'absolute', top: Platform.OS === 'ios' ? 60 : 30, right: 20, zIndex: 10000, padding: 12, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 25 }} onPress={closeImage}>
+            <Feather name="x" size={24} color="white" />
+          </Pressable>
+          <Animated.Image 
+            source={{ uri: selectedImage }} 
+            style={{ 
+              width: width, 
+              height: Dimensions.get('window').height * 0.8,
+              transform: [{ scale: zoomAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }],
+              opacity: zoomAnim
+            }} 
+            resizeMode="contain" 
+          />
+        </View>
+      )}
     </View>
   );
 }
