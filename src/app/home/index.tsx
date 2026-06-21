@@ -12,57 +12,68 @@ import { scheduleSleepProtection, scheduleSmartGrocery } from '../../lib/notific
 import { useAlertStore } from '../../store/useAlertStore';
 import LottieView from 'lottie-react-native';
 
-const HeartBubble = ({ delay }: { delay: number }) => {
+const HeartBubblesBurst = () => {
   const anim = useRef(new Animated.Value(0)).current;
 
-  // Use a fixed random seed for consistent but varied paths per bubble instance
-  const randomX = useMemo(() => 20 + Math.random() * 25, []);
-  const randomY = useMemo(() => -10 - Math.random() * 20, []);
-
   useEffect(() => {
+    // Reset về 0 mỗi khi bắt đầu
+    anim.setValue(0);
     Animated.loop(
       Animated.sequence([
-        Animated.delay(delay),
         Animated.timing(anim, {
           toValue: 1,
-          duration: 3000,
+          duration: 2500, // Thời gian bay và mờ dần
           useNativeDriver: true,
-        })
+        }),
+        Animated.delay(500), // Thời gian nghỉ trước đợt tiếp theo (tổng 3s)
       ])
     ).start();
-  }, [anim, delay]);
+  }, [anim]);
 
-  const translateX = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, randomX]
-  });
+  const renderBubble = (idx: number) => {
+    const randomX = 15 + idx * 12; // Các bong bóng bay xa dần sang phải
+    const randomY = -5 - idx * 8; // Lệch độ cao một chút
 
-  const translateY = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, randomY]
-  });
+    const translateX = anim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, randomX]
+    });
 
-  const scale = anim.interpolate({
-    inputRange: [0, 0.2, 0.8, 1],
-    outputRange: [0.2, 1, 1.4, 1.6]
-  });
+    const translateY = anim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, randomY]
+    });
 
-  const opacity = anim.interpolate({
-    inputRange: [0, 0.1, 0.6, 1],
-    outputRange: [0, 0.8, 0.5, 0]
-  });
+    const scale = anim.interpolate({
+      inputRange: [0, 0.2, 0.8, 1],
+      outputRange: [0.2, 1, 1.3 + idx * 0.1, 1.5]
+    });
+
+    const opacity = anim.interpolate({
+      inputRange: [0, 0.1, 0.7, 1],
+      outputRange: [0, 0.8, 0.5, 0]
+    });
+
+    return (
+      <Animated.View key={idx} style={{
+        position: 'absolute',
+        right: 0,
+        top: 5,
+        transform: [{ translateX }, { translateY }, { scale }],
+        opacity,
+        zIndex: 1
+      }}>
+        <Ionicons name="heart" size={10 + idx} color={idx % 2 === 0 ? "#FF80AB" : "#FF4B72"} />
+      </Animated.View>
+    );
+  };
 
   return (
-    <Animated.View style={{
-      position: 'absolute',
-      right: 0,
-      top: 5,
-      transform: [{ translateX }, { translateY }, { scale }],
-      opacity,
-      zIndex: 1
-    }}>
-      <Ionicons name="heart" size={10} color="#FF80AB" />
-    </Animated.View>
+    <>
+      {renderBubble(0)}
+      {renderBubble(1)}
+      {renderBubble(2)}
+    </>
   );
 };
 
@@ -471,9 +482,7 @@ export default function Home() {
           
           <View style={{ position: 'relative' }}>
             <Image source={require('../../../assets/images/iump_decor.png')} style={styles.appLogo} resizeMode="contain" />
-            <HeartBubble delay={0} />
-            <HeartBubble delay={1000} />
-            <HeartBubble delay={2000} />
+            <HeartBubblesBurst />
           </View>
           <Pressable style={styles.notiBtn} onPress={handleOpenNotifications}>
             <Feather name="bell" size={24} color={colors.text} />
