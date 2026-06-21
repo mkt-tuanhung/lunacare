@@ -7,6 +7,9 @@ import { useProfileStore } from '../../store/useProfileStore';
 import { useCycleStore } from '../../store/useCycleStore';
 import { supabase } from '../../lib/supabase';
 import { useAlertStore } from '../../store/useAlertStore';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadImageToR2 } from '../../lib/r2';
+import { ActivityIndicator, Image, Switch } from 'react-native';
 
 // Định nghĩa lại các câu hỏi để render form (Rút gọn từ Onboarding)
 const QUESTIONS = [
@@ -30,7 +33,37 @@ const QUESTIONS = [
 export default function HealthProfileScreen() {
   const router = useRouter();
   const profileStore = useProfileStore();
-  const [answers, setAnswers] = useState<any>(profileStore.profile?.healthProfile || {});
+  const { profile, updateAvatarUrl } = profileStore;
+  const [answers, setAnswers] = useState<any>(profile?.healthProfile || {});
+  const [isUploading, setIsUploading] = useState(false);
+  const [isPinEnabled, setIsPinEnabled] = useState(false);
+
+  const handlePickAvatar = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setIsUploading(true);
+        const uri = result.assets[0].uri;
+        const uploadedUrl = await uploadImageToR2(uri, profile?.uid || 'guest', 'avatars');
+        if (uploadedUrl) {
+          updateAvatarUrl(uploadedUrl);
+        } else {
+          useAlertStore.getState().showAlert("Lỗi", "Không thể upload ảnh lên Cloudflare R2 lúc này.");
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      useAlertStore.getState().showAlert("Lỗi", "Có lỗi xảy ra khi chọn ảnh.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSelect = (qId: string, val: string) => {
     setAnswers({ ...answers, [qId]: val });
@@ -78,6 +111,75 @@ export default function HealthProfileScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        
+        {/* Section: Tài khoản & Cá nhân hoá */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Tài khoản & Cá nhân hoá</Text>
+        </View>
+        <View style={styles.accountBlock}>
+          
+          {/* Avatar */}
+          <View style={styles.avatarRow}>
+            <View style={styles.avatarContainer}>
+              {isUploading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : profile?.avatarUrl ? (
+                <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarMock}><Text style={{fontSize: 24}}>👱‍♀️</Text></View>
+              )}
+            </View>
+            <View style={{ flex: 1, marginLeft: 16 }}>
+              <Text style={styles.userName}>{profile?.name || 'Người dùng'}</Text>
+              <Pressable style={styles.changeAvatarBtn} onPress={handlePickAvatar}>
+                <Feather name="camera" size={14} color="white" />
+                <Text style={styles.changeAvatarText}>Đổi ảnh đại diện</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Mật khẩu */}
+          <Pressable style={styles.settingRow} onPress={() => useAlertStore.getState().showAlert("Bảo mật", "Tính năng đổi mật khẩu đang được cập nhật.")}>
+            <View style={styles.settingRowLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: '#E3F2FD' }]}>
+                <Feather name="lock" size={18} color="#1976D2" />
+              </View>
+              <Text style={styles.settingText}>Đổi mật khẩu</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color="#CCC" />
+          </Pressable>
+
+          <View style={styles.divider} />
+
+          {/* PIN */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingRowLeft}>
+              <View style={[styles.settingIcon, { backgroundColor: '#FCE4EC' }]}>
+                <Feather name="shield" size={18} color="#C2185B" />
+              </View>
+              <View>
+                <Text style={styles.settingText}>Khóa ứng dụng (Mã PIN)</Text>
+                <Text style={styles.settingSubtext}>Yêu cầu mã PIN khi mở ứng dụng</Text>
+              </View>
+            </View>
+            <Switch 
+              value={isPinEnabled} 
+              onValueChange={(val) => {
+                setIsPinEnabled(val);
+                if (val) useAlertStore.getState().showAlert("Mã PIN", "Vui lòng nhập mã PIN để bật tính năng này (Đang cập nhật).");
+              }} 
+              trackColor={{ false: '#E0E0E0', true: colors.primaryLight }}
+              thumbColor={isPinEnabled ? colors.primary : '#FFF'}
+            />
+          </View>
+        </View>
+
+        {/* Section: Hồ sơ sức khoẻ */}
+        <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+          <Text style={styles.sectionTitle}>Hồ sơ Sức khỏe</Text>
+        </View>
         <View style={styles.infoBanner}>
           <Feather name="info" size={20} color={colors.primary} />
           <Text style={styles.infoText}>Chỉnh sửa thông tin bên dưới sẽ giúp AI tính toán lại chu kỳ và đưa ra lời khuyên chính xác nhất cho bạn.</Text>
@@ -138,5 +240,21 @@ const styles = StyleSheet.create({
   optionText: { color: colors.textMuted, fontSize: 14, fontWeight: '500' },
   optionTextActive: { color: colors.primaryDark, fontWeight: '700' },
   saveBtn: { backgroundColor: colors.primary, padding: 18, borderRadius: 24, alignItems: 'center', marginTop: 10 },
-  saveBtnText: { color: 'white', fontSize: 16, fontWeight: 'bold' }
+  saveBtnText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  sectionHeader: { marginBottom: 12, paddingHorizontal: 4 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+  accountBlock: { backgroundColor: colors.card, padding: 16, borderRadius: 16, marginBottom: 24, boxShadow: '0px 2px 8px rgba(0,0,0,0.03)' },
+  avatarRow: { flexDirection: 'row', alignItems: 'center' },
+  avatarContainer: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#F0F0F0', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  avatarImage: { width: '100%', height: '100%' },
+  avatarMock: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFECB3' },
+  userName: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8 },
+  changeAvatarBtn: { flexDirection: 'row', backgroundColor: colors.primary, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, alignSelf: 'flex-start', alignItems: 'center', gap: 6 },
+  changeAvatarText: { color: 'white', fontSize: 12, fontWeight: '600' },
+  divider: { height: 1, backgroundColor: '#F0F0F0', marginVertical: 16 },
+  settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  settingRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  settingIcon: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  settingText: { fontSize: 15, fontWeight: '600', color: colors.text },
+  settingSubtext: { fontSize: 12, color: colors.textMuted, marginTop: 2 }
 });

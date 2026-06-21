@@ -140,7 +140,6 @@ const BottomNavBar = () => {
 export default function Home() {
   const { periodEvents, prediction, isPredicting, calculatePrediction, isAiModeEnabled, toggleAiMode } = useCycleStore();
   const { profile, updateAvatarUrl } = useProfileStore();
-  const [isUploading, setIsUploading] = useState(false);
   const [isUploadingAlbum, setIsUploadingAlbum] = useState(false);
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -201,50 +200,8 @@ export default function Home() {
       clearInterval(intervalTimer);
     };
   }, [moodBubbleAnim, moodFloatAnim]);
-
-  const handlePickAvatar = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setIsUploading(true);
-        const uri = result.assets[0].uri;
-        const uploadedUrl = await uploadImageToR2(uri, profile?.uid || 'guest', 'avatars');
-        if (uploadedUrl) {
-          updateAvatarUrl(uploadedUrl);
-        } else {
-          useAlertStore.getState().showAlert("Lỗi", "Không thể upload ảnh lên Cloudflare R2 lúc này.");
-        }
-      }
-    } catch (error) {
-      console.error(error);
-      useAlertStore.getState().showAlert("Lỗi", "Có lỗi xảy ra khi chọn ảnh.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   const handleAvatarPress = () => {
-    if (Platform.OS === 'web') {
-      const confirm = window.confirm("Bạn muốn đổi ảnh đại diện? (Bấm OK để đổi, Cancel để vào Hồ sơ)");
-      if (confirm) handlePickAvatar();
-      else router.push('/health-profile');
-    } else {
-      Alert.alert(
-        "Tùy chọn",
-        "Bạn muốn làm gì?",
-        [
-          { text: "Cập nhật Hồ sơ", onPress: () => router.push('/health-profile') },
-          { text: "Đổi Ảnh đại diện", onPress: handlePickAvatar },
-          { text: "Hủy", style: "cancel" }
-        ]
-      );
-    }
+    router.push('/health-profile');
   };
 
   const handlePickAlbumPhotos = async () => {
@@ -421,9 +378,7 @@ export default function Home() {
         <View style={styles.topAppBar}>
           <View style={{ flexDirection: 'row', alignItems: 'center', zIndex: 10 }}>
             <Pressable style={styles.profileBtn} onPress={handleAvatarPress}>
-              {isUploading ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : profile?.avatarUrl ? (
+              {profile?.avatarUrl ? (
                 <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
               ) : (
                 <View style={styles.avatarMock}><Text style={{fontSize: 20}}>👱‍♀️</Text></View>
