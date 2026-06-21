@@ -13,6 +13,11 @@ const s3Client = new S3Client({
   region: 'auto',
   endpoint: R2_ENDPOINT,
   forcePathStyle: true,
+  // Cloudflare R2 conflict with AWS SDK v3 auto checksums:
+  // SDK adds dummy CRC32 checksum for empty payloads when creating presigned URLs.
+  // R2 verifies it against the actual payload later and returns 403/400, causing CORS errors.
+  requestChecksumCalculation: 'WHEN_REQUIRED',
+  responseChecksumValidation: 'WHEN_REQUIRED',
   credentials: {
     accessKeyId: R2_ACCESS_KEY_ID,
     secretAccessKey: R2_SECRET_ACCESS_KEY,
