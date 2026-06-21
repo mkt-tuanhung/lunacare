@@ -217,7 +217,8 @@ export default function Home() {
         const uploadedUrls: string[] = [];
         
         for (const asset of result.assets) {
-          const url = await uploadImageToR2(asset.uri, profile?.uid || 'guest', 'albums');
+          const fileData = (Platform.OS === 'web' && asset.file) ? asset.file : asset.uri;
+          const url = await uploadImageToR2(fileData, profile?.uid || 'guest', 'albums');
           if (url) uploadedUrls.push(url);
         }
 

@@ -17,8 +17,7 @@ const s3Client = new S3Client({
     secretAccessKey: R2_SECRET_ACCESS_KEY,
   },
 });
-
-export const uploadImageToR2 = async (fileUri: string, userId: string, folder: string = 'avatars'): Promise<string | null> => {
+export const uploadImageToR2 = async (fileUri: string | Blob, userId: string, folder: string = 'avatars'): Promise<string | null> => {
   if (!R2_ACCESS_KEY_ID || !R2_ENDPOINT) {
     console.warn("Chưa cấu hình Cloudflare R2 trong file .env");
     if (typeof window !== 'undefined') {
@@ -28,21 +27,30 @@ export const uploadImageToR2 = async (fileUri: string, userId: string, folder: s
   }
   
   try {
-    // 1. Fetch file từ local URI thành Blob
-    const response = await fetch(fileUri);
-    const blob = await response.blob();
-    
-    // 2. Tạo tên file duy nhất (Sửa lỗi cho Web khi URI là blob: hoặc data:)
+    // 1. Fetch file từ local URI thành Blob HOẶC dùng luôn nếu đã là Blob/File (Web)
+    let blob: Blob;
     let ext = 'jpg';
-    if (blob.type) {
-      ext = blob.type.split('/')[1] || 'jpg';
-    } else if (fileUri.includes('.')) {
-      const parts = fileUri.split('.');
-      const possibleExt = parts[parts.length - 1];
-      if (possibleExt.length <= 4 && !possibleExt.includes('/')) {
-        ext = possibleExt;
+
+    if (typeof fileUri === 'string') {
+      const response = await fetch(fileUri);
+      blob = await response.blob();
+      
+      if (blob.type) {
+        ext = blob.type.split('/')[1] || 'jpg';
+      } else if (fileUri.includes('.')) {
+        const parts = fileUri.split('.');
+        const possibleExt = parts[parts.length - 1];
+        if (possibleExt.length <= 4 && !possibleExt.includes('/')) {
+          ext = possibleExt;
+        }
+      }
+    } else {
+      blob = fileUri as Blob;
+      if (blob.type) {
+        ext = blob.type.split('/')[1] || 'jpg';
       }
     }
+
     const fileName = `${folder}/${userId}-${Date.now()}.${ext}`;
 
     // 3. Tạo command

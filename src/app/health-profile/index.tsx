@@ -49,8 +49,10 @@ export default function HealthProfileScreen() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setIsUploading(true);
-        const uri = result.assets[0].uri;
-        const uploadedUrl = await uploadImageToR2(uri, profile?.uid || 'guest', 'avatars');
+        const asset = result.assets[0];
+        // Truyền asset.file (có trên Web) hoặc asset.uri (trên Native)
+        const fileData = (Platform.OS === 'web' && asset.file) ? asset.file : asset.uri;
+        const uploadedUrl = await uploadImageToR2(fileData, profile?.uid || 'guest', 'avatars');
         if (uploadedUrl) {
           updateAvatarUrl(uploadedUrl);
         } else {
