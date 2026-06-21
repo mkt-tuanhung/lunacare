@@ -150,14 +150,14 @@ export default function Home() {
 
   // Lottie Files array
   const moodLotties = [
-    require('../../../assets/images/moods/Cool emoji.json'),
-    require('../../../assets/images/moods/Fire.json'),
-    require('../../../assets/images/moods/LMAO.json'),
-    require('../../../assets/images/moods/Money.json'),
-    require('../../../assets/images/moods/Sad Emoji (1).json'),
-    require('../../../assets/images/moods/Sad Emoji (2).json'),
-    require('../../../assets/images/moods/Sad Emoji.json'),
-    require('../../../assets/images/moods/Star Strike Emoji.json')
+    require('../../../assets/images/moods/cool_emoji.json'),
+    require('../../../assets/images/moods/fire.json'),
+    require('../../../assets/images/moods/lmao.json'),
+    require('../../../assets/images/moods/money.json'),
+    require('../../../assets/images/moods/sad_emoji_1.json'),
+    require('../../../assets/images/moods/sad_emoji_2.json'),
+    require('../../../assets/images/moods/sad_emoji.json'),
+    require('../../../assets/images/moods/star_strike.json')
   ];
 
   const [currentMood, setCurrentMood] = useState(moodLotties[0]);
@@ -439,12 +439,15 @@ export default function Home() {
               ]
             }]}>
               <View style={styles.moodBubbleTail} />
-              <LottieView
-                source={currentMood}
-                autoPlay
-                loop
-                style={{ width: 36, height: 36 }}
-              />
+              <View style={{ width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                <LottieView
+                  source={currentMood}
+                  autoPlay
+                  loop
+                  resizeMode="contain"
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </View>
             </Animated.View>
           </View>
           

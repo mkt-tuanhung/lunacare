@@ -29,8 +29,17 @@ export const uploadImageToR2 = async (fileUri: string, userId: string, folder: s
     const response = await fetch(fileUri);
     const blob = await response.blob();
     
-    // 2. Tạo tên file duy nhất
-    const ext = fileUri.split('.').pop() || 'jpg';
+    // 2. Tạo tên file duy nhất (Sửa lỗi cho Web khi URI là blob: hoặc data:)
+    let ext = 'jpg';
+    if (blob.type) {
+      ext = blob.type.split('/')[1] || 'jpg';
+    } else if (fileUri.includes('.')) {
+      const parts = fileUri.split('.');
+      const possibleExt = parts[parts.length - 1];
+      if (possibleExt.length <= 4 && !possibleExt.includes('/')) {
+        ext = possibleExt;
+      }
+    }
     const fileName = `${folder}/${userId}-${Date.now()}.${ext}`;
 
     // 3. Tạo command
