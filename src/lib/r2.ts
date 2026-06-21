@@ -21,6 +21,9 @@ const s3Client = new S3Client({
 export const uploadImageToR2 = async (fileUri: string, userId: string, folder: string = 'avatars'): Promise<string | null> => {
   if (!R2_ACCESS_KEY_ID || !R2_ENDPOINT) {
     console.warn("Chưa cấu hình Cloudflare R2 trong file .env");
+    if (typeof window !== 'undefined') {
+      window.alert("Lỗi: Thiếu biến môi trường R2_ACCESS_KEY_ID hoặc R2_ENDPOINT trên Vercel. Vui lòng cấu hình trong Project Settings.");
+    }
     return null;
   }
   
@@ -76,6 +79,9 @@ export const uploadImageToR2 = async (fileUri: string, userId: string, folder: s
 
   } catch (error: any) {
     console.error("Lỗi khi upload ảnh lên R2:", error);
+    if (typeof window !== 'undefined') {
+      window.alert("Lỗi chi tiết khi upload R2: " + (error.message || error.toString()) + "\nNếu là lỗi 'Failed to fetch', hãy kiểm tra cấu hình CORS trên Cloudflare R2.");
+    }
     return null;
   }
 };
