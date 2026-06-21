@@ -193,7 +193,7 @@ export default function Home() {
     };
 
     const initialTimer = setTimeout(showMoodBubble, 2000);
-    const intervalTimer = setInterval(showMoodBubble, 14000);
+    const intervalTimer = setInterval(showMoodBubble, 5000);
 
     return () => {
       clearTimeout(initialTimer);
