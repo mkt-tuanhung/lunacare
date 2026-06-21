@@ -50,7 +50,6 @@ export const uploadImageToR2 = async (fileUri: string, userId: string, folder: s
       Bucket: R2_BUCKET,
       Key: fileName,
       ContentType: blob.type || 'image/jpeg',
-      ACL: 'public-read', // R2 hỗ trợ ACL
     });
 
     // 4. Lấy Presigned URL (để RN upload native qua fetch, không qua aws-sdk bị lỗi)
