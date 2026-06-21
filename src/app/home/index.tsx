@@ -146,6 +146,7 @@ export default function Home() {
   const rippleAnim = useRef(new Animated.Value(0)).current;
   const moodBubbleAnim = useRef(new Animated.Value(0)).current;
   const moodFloatAnim = useRef(new Animated.Value(0)).current;
+  const scrollX = useRef(new Animated.Value(0)).current;
 
   // Lottie Files array
   const moodLotties = [
@@ -563,35 +564,66 @@ export default function Home() {
             </Pressable>
           </View>
           
-          <ScrollView 
+          <Animated.ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false} 
-            snapToInterval={220} // width 200 + gap 20
+            snapToInterval={220} // item width (200) + margins (20)
             decelerationRate="fast"
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 20, paddingVertical: 10, paddingBottom: 30 }}
+            scrollEventThrottle={16}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+              { useNativeDriver: true }
+            )}
+            contentContainerStyle={{ paddingHorizontal: (width - 220) / 2, paddingVertical: 20, paddingBottom: 40 }}
           >
             {profile?.healthProfile?.albumUrls?.length ? (
-               profile.healthProfile.albumUrls.map((url, idx) => (
-                 <Animated.View key={idx} style={{ 
-                    shadowColor: '#000', shadowOffset: {width: 0, height: 8}, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5,
-                    transform: [{ rotate: idx % 2 === 0 ? '-2deg' : '2deg' }]
-                 }}>
-                   <Image source={{uri: url}} style={styles.albumImage} />
-                   <Pressable 
-                     style={{ position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, borderRadius: 20 }}
-                     onPress={() => handleDeletePhoto(idx)}
-                   >
-                     <Feather name="trash-2" size={18} color="white" />
-                   </Pressable>
-                 </Animated.View>
-               ))
+               profile.healthProfile.albumUrls.map((url, idx) => {
+                 const inputRange = [
+                   (idx - 1) * 220,
+                   idx * 220,
+                   (idx + 1) * 220
+                 ];
+                 const scale = scrollX.interpolate({
+                   inputRange,
+                   outputRange: [0.85, 1.05, 0.85],
+                   extrapolate: 'clamp'
+                 });
+                 const rotateY = scrollX.interpolate({
+                   inputRange,
+                   outputRange: ['30deg', '0deg', '-30deg'],
+                   extrapolate: 'clamp'
+                 });
+                 const opacity = scrollX.interpolate({
+                   inputRange,
+                   outputRange: [0.6, 1, 0.6],
+                   extrapolate: 'clamp'
+                 });
+
+                 return (
+                   <Animated.View key={idx} style={{ 
+                      width: 200,
+                      marginHorizontal: 10,
+                      shadowColor: '#000', shadowOffset: {width: 0, height: 12}, shadowOpacity: 0.2, shadowRadius: 15, elevation: 8,
+                      opacity,
+                      transform: [{ perspective: 1000 }, { rotateY }, { scale }]
+                   }}>
+                     <Image source={{uri: url}} style={styles.albumImage} />
+                     <Pressable 
+                       style={{ position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.6)', padding: 8, borderRadius: 20, zIndex: 10 }}
+                       onPress={() => handleDeletePhoto(idx)}
+                     >
+                       <Feather name="trash-2" size={18} color="white" />
+                     </Pressable>
+                   </Animated.View>
+                 );
+               })
             ) : (
-               <Pressable style={styles.emptyAlbumCard} onPress={handlePickAlbumPhotos}>
+               <Pressable style={[styles.emptyAlbumCard, { marginHorizontal: 10 }]} onPress={handlePickAlbumPhotos}>
                   <Feather name="image" size={32} color={colors.textMuted} />
                   <Text style={{color: colors.textMuted, marginTop: 10, fontWeight: '600'}}>Thêm ảnh kỷ niệm</Text>
                </Pressable>
             )}
-          </ScrollView>
+          </Animated.ScrollView>
         </View>
 
       </ScrollView>
@@ -683,7 +715,7 @@ const styles = StyleSheet.create({
   actionCenter: { paddingHorizontal: 20, marginBottom: 20 },
   actionCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primaryLight + '20', padding: 20, borderRadius: 24, borderWidth: 1, borderColor: colors.primaryLight, marginBottom: 10 },
   
-  albumSection: { marginTop: 10 },
-  albumImage: { width: 200, height: 280, borderRadius: 20, borderWidth: 3, borderColor: 'white' },
+  albumSection: { marginTop: 10, overflow: 'visible' },
+  albumImage: { width: '100%', height: 280, borderRadius: 20, borderWidth: 3, borderColor: 'white' },
   emptyAlbumCard: { width: 200, height: 280, borderRadius: 20, backgroundColor: colors.card, justifyContent: 'center', alignItems: 'center', borderStyle: 'dashed', borderWidth: 2, borderColor: '#E0E0E0' }
 });
